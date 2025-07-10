@@ -1,0 +1,16 @@
+{
+    "id_1" : [
+        "/path/to/image1.jpg",
+        "/path/to/image2.jpg",
+        "/path/to/image3.jpg",
+        "/path/to/image4.jpg",
+        "/path/to/image5.jpg",
+        "/path/to/image6.jpg"
+    ],
+    "id_2" : [
+        "/path/to/image1.jpg",
+        "/path/to/image2.jpg",
+        "/path/to/image3.jpg",
+        "/path/to/image4.jpg"
+    ]
+}

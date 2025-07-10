@@ -1,0 +1,5 @@
+- Adapt the idea of research in main.tex to training an identical twin faces verification model (given two face image, tell whether they are same person or not). Because the identical twin faces verification task is also a fine-grained image task.
+- Dataset are detected, aligned face images size 448x448, dataset structure is stored in dataset_infor.json, which is a dictionary, with keys are person id and values are list of image paths. The minimum number of image each person is 4, maximum is 68, total image are 6182, total number of person is 353. A test dataset is in a different place.
+- There is a twin_pairs_infor.json, which is a list of pairs of twin id.
+- I have two 2080Ti GPU(cuda:0, cuda:1). The training server is strictly on sending data to the internet, but there is a locally hosted MLFlow service for training tracking.
+- Is 6182 a big enough dataset for train this model? If it is pretty small, make sure the training code make use of available data
