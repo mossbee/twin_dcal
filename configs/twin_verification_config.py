@@ -7,7 +7,7 @@ optimized for the identical twin face verification task using 2x RTX 2080Ti GPUs
 
 import os
 import torch
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
 
@@ -24,21 +24,22 @@ class TwinVerificationConfig:
     TWIN_PAIRS_INFO: str = "data/twin_pairs_infor.json"
     
     # External test dataset (mentioned in purpose.md)
-    EXTERNAL_TEST_DATASET: Optional[str] = None  # Path to external test dataset
-    EXTERNAL_TEST_PAIRS: Optional[str] = None    # Path to external test pairs info
-    USE_EXTERNAL_TEST: bool = False              # Whether to use external test set
+    # NOTE: Update these paths to point to your actual external test dataset files
+    EXTERNAL_TEST_DATASET: Optional[str] = "data/external_test_dataset_infor.json"  # Path to external test dataset info (same format as main dataset)
+    EXTERNAL_TEST_PAIRS: Optional[str] = "data/external_test_twin_pairs.json"    # Path to external test twin pairs (optional, can use main twin pairs)
+    USE_EXTERNAL_TEST: bool = True              # Use external test set (as mentioned in purpose.md)
     
-    # Dataset statistics
+    # Dataset statistics (main training dataset only - test dataset is external)
     TOTAL_IDENTITIES: int = 353
     TOTAL_IMAGES: int = 6182
     IMAGES_PER_PERSON_MIN: int = 4
     IMAGES_PER_PERSON_MAX: int = 68
     IMAGES_PER_PERSON_AVG: float = 17.5
     
-    # Data splits (maximizing small dataset usage)
-    TRAIN_RATIO: float = 0.8    # ~4,946 images
-    VAL_RATIO: float = 0.1      # ~618 images
-    TEST_RATIO: float = 0.1     # ~618 images
+    # Data splits (maximizing small dataset usage for training only)
+    TRAIN_RATIO: float = 0.9    # Use 90% for training (more data for training)
+    VAL_RATIO: float = 0.1      # Use 10% for validation
+    TEST_RATIO: float = 0.0     # No test split from main dataset - external test set available
     
     # Pair generation strategy
     TWIN_PAIR_RATIO: float = 0.3  # 30% of negatives are twin pairs (hard negatives)
@@ -56,8 +57,8 @@ class TwinVerificationConfig:
     SEQUENCE_LENGTH: int = 785  # 784 patches + 1 CLS token
     
     # Image preprocessing
-    MEAN: List[float] = [0.485, 0.456, 0.406]
-    STD: List[float] = [0.229, 0.224, 0.225]
+    MEAN: List[float] = field(default_factory=lambda: [0.485, 0.456, 0.406])
+    STD: List[float] = field(default_factory=lambda: [0.229, 0.224, 0.225])
     
     # Data augmentation (conservative for faces)
     HORIZONTAL_FLIP_PROB: float = 0.0   # Don't flip faces
@@ -95,7 +96,7 @@ class TwinVerificationConfig:
     
     # GPU configuration
     WORLD_SIZE: int = 2
-    GPUS: List[str] = ["cuda:0", "cuda:1"]
+    GPUS: List[str] = field(default_factory=lambda: ["cuda:0", "cuda:1"])
     
     # Memory optimization for RTX 2080Ti (11GB each)
     BATCH_SIZE_PER_GPU: int = 8         # Conservative for 448x448 images
@@ -126,7 +127,7 @@ class TwinVerificationConfig:
     BASE_LEARNING_RATE: float = 3e-4
     LEARNING_RATE_FORMULA: str = "(3e-4/64) × effective_batch_size"
     WEIGHT_DECAY: float = 0.01
-    BETAS: List[float] = [0.9, 0.999]
+    BETAS: List[float] = field(default_factory=lambda: [0.9, 0.999])
     EPS: float = 1e-8
     
     # Learning rate scheduling
@@ -151,14 +152,14 @@ class TwinVerificationConfig:
     FOCAL_GAMMA: float = 2.0
     
     # Multi-task loss weights
-    LOSS_WEIGHTS: Dict[str, float] = {
+    LOSS_WEIGHTS: Dict[str, float] = field(default_factory=lambda: {
         "triplet": 0.4,                 # Triplet loss for embedding learning
         "bce": 0.4,                     # Binary cross-entropy for verification
         "focal": 0.2,                   # Focal loss for hard examples
         "sa_weight": 1.0,               # Self-attention branch weight
         "glca_weight": 1.0,             # Global-local cross-attention weight
         "pwca_weight": 0.3              # Pair-wise cross-attention weight (reduced for small dataset)
-    }
+    })
     
     # ============================================================================
     # MODEL CONFIGURATION
@@ -171,14 +172,14 @@ class TwinVerificationConfig:
     
     # Verification head
     FEATURE_DIM: int = 768 * 2          # Combined SA + GLCA features
-    VERIFICATION_HIDDEN_DIMS: List[int] = [512, 256]
+    VERIFICATION_HIDDEN_DIMS: List[int] = field(default_factory=lambda: [512, 256])
     
     # ============================================================================
     # EVALUATION CONFIGURATION
     # ============================================================================
     
     # Evaluation metrics
-    EVAL_METRICS: List[str] = [
+    EVAL_METRICS: List[str] = field(default_factory=lambda: [
         "verification_accuracy",
         "equal_error_rate", 
         "roc_auc",
@@ -186,11 +187,11 @@ class TwinVerificationConfig:
         "tar_at_far_001",           # True Accept Rate at 0.1% False Accept Rate
         "tar_at_far_01",            # True Accept Rate at 1% False Accept Rate
         "twin_pair_accuracy"        # Accuracy specifically on twin pairs
-    ]
+    ])
     
     # Threshold optimization
     VERIFICATION_THRESHOLD: float = 0.5  # Will be optimized on validation set
-    THRESHOLD_SEARCH_RANGE: List[float] = [0.1, 0.9]
+    THRESHOLD_SEARCH_RANGE: List[float] = field(default_factory=lambda: [0.1, 0.9])
     THRESHOLD_SEARCH_STEPS: int = 100
     
     # ============================================================================
@@ -207,8 +208,8 @@ class TwinVerificationConfig:
     # Logging
     LOG_FREQ: int = 100                 # Log every 100 steps
     # WANDB_PROJECT: str = "twin-face-verification"  # REMOVED: Privacy risk
-    MLFLOW_TRACKING_URI: str = "http://localhost:5000"  # Local MLFlow server
-    MLFLOW_EXPERIMENT_NAME: str = "twin-face-verification"
+    MLFLOW_TRACKING_URI: str = "http://107.98.152.63:5000"  # Local MLFlow server
+    MLFLOW_EXPERIMENT_NAME: str = "twin_face_verification"
     TENSORBOARD_LOG_DIR: str = "logs/tensorboard"
     LOG_GRAD_NORM: bool = True
     LOG_ATTENTION_MAPS: bool = True
@@ -266,7 +267,16 @@ class TwinVerificationConfig:
         assert self.EFFECTIVE_BATCH_SIZE == self.TOTAL_BATCH_SIZE * self.GRADIENT_ACCUMULATION
         
         # Check data split ratios
-        assert abs(self.TRAIN_RATIO + self.VAL_RATIO + self.TEST_RATIO - 1.0) < 1e-6
+        if self.USE_EXTERNAL_TEST:
+            # When using external test dataset, only train and val ratios need to sum to 1.0
+            assert abs(self.TRAIN_RATIO + self.VAL_RATIO - 1.0) < 1e-6, \
+                f"Train ratio ({self.TRAIN_RATIO}) + Val ratio ({self.VAL_RATIO}) must sum to 1.0 when using external test"
+            assert self.TEST_RATIO == 0.0, \
+                "TEST_RATIO should be 0.0 when using external test dataset"
+        else:
+            # When using internal test split, all ratios must sum to 1.0
+            assert abs(self.TRAIN_RATIO + self.VAL_RATIO + self.TEST_RATIO - 1.0) < 1e-6, \
+                f"Train ({self.TRAIN_RATIO}) + Val ({self.VAL_RATIO}) + Test ({self.TEST_RATIO}) ratios must sum to 1.0"
         
         # Check sequence length
         expected_seq_len = (self.INPUT_SIZE // self.PATCH_SIZE) ** 2 + 1  # +1 for CLS
