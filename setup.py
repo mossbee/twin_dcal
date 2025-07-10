@@ -29,7 +29,6 @@ else:
         "torchvision>=0.13.0",
         "transformers>=4.20.0",
         "tensorboard>=2.5.0",
-        # "wandb>=0.12.0",  # REMOVED: Privacy risk - sends data externally
         "mlflow>=2.8.0",  # Local tracking only
         "scikit-learn>=1.0.0",
         "opencv-python>=4.5.0",
@@ -60,7 +59,6 @@ extras_require = {
         "deepspeed>=0.5.0",
     ],
     "experiment": [
-        # "wandb>=0.12.0",  # REMOVED: Privacy risk - sends data externally
         "tensorboard>=2.5.0",
         "mlflow>=1.18.0",
     ],
@@ -69,7 +67,6 @@ extras_require = {
         "dash>=2.0.0",
         "streamlit>=1.0.0",
         "horovod>=0.21.0",
-        # "wandb>=0.12.0",  # REMOVED: Privacy risk - sends data externally
         "tensorboard>=2.5.0",
         "mlflow>=1.18.0",
         "pytest>=6.0.0",
@@ -134,25 +131,6 @@ setup(
     include_package_data=True,
     package_data={
         "": ["*.json", "*.yaml", "*.yml", "*.txt", "*.md"],
-        "configs": ["*.json", "*.yaml", "*.yml"],
-        "data": ["*.json", "*.txt"],
     },
-    keywords=[
-        "face verification",
-        "twin face",
-        "deep learning",
-        "computer vision",
-        "attention mechanism",
-        "cross-attention",
-        "pytorch",
-        "biometric verification",
-        "identity verification",
-    ],
     zip_safe=False,
-    test_suite="tests",
-    tests_require=[
-        "pytest>=6.0.0",
-        "pytest-cov>=2.10.0",
-        "pytest-mock>=3.6.0",
-    ],
 ) 

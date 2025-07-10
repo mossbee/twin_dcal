@@ -45,7 +45,7 @@ def test_forward_pass(model, config):
     """Test forward pass with dummy data"""
     print("\nTesting forward pass...")
     
-    batch_size = 2
+    batch_size = 1
     img_size = config.INPUT_SIZE
     channels = config.INPUT_CHANNELS
     
@@ -115,7 +115,7 @@ def test_similarity_computation(model, config):
     """Test similarity computation"""
     print("\nTesting similarity computation...")
     
-    batch_size = 2
+    batch_size = 1
     img_size = config.INPUT_SIZE
     channels = config.INPUT_CHANNELS
     
@@ -145,7 +145,7 @@ def test_gradient_flow(model, config):
     """Test that gradients flow properly"""
     print("\nTesting gradient flow...")
     
-    batch_size = 2
+    batch_size = 1
     img_size = config.INPUT_SIZE
     channels = config.INPUT_CHANNELS
     

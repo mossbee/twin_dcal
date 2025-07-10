@@ -207,7 +207,6 @@ class TwinVerificationConfig:
     
     # Logging
     LOG_FREQ: int = 100                 # Log every 100 steps
-    # WANDB_PROJECT: str = "twin-face-verification"  # REMOVED: Privacy risk
     MLFLOW_TRACKING_URI: str = "http://107.98.152.63:5000"  # Local MLFlow server
     MLFLOW_EXPERIMENT_NAME: str = "twin_face_verification"
     TENSORBOARD_LOG_DIR: str = "logs/tensorboard"

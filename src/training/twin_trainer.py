@@ -198,16 +198,18 @@ class TwinVerificationTrainer:
             os.makedirs(log_dir, exist_ok=True)
             self.writer = SummaryWriter(log_dir)
             
-            # Weights & Biases
+            # MLFlow (local server already deployed)
             try:
-                self.wandb_run = wandb.init(
-                    project=self.config.WANDB_PROJECT,
-                    config=self.config.to_dict(),
-                    name=f"dcal_twin_verification_{int(time.time())}"
+                mlflow.set_tracking_uri(self.config.MLFLOW_TRACKING_URI)
+                mlflow.set_experiment(self.config.MLFLOW_EXPERIMENT_NAME)
+                self.mlflow_run = mlflow.start_run(
+                    run_name=f"dcal_twin_verification_{int(time.time())}"
                 )
+                mlflow.log_params(self.config.to_dict())
+                print(f"MLFlow run started: {self.mlflow_run.info.run_id}")
             except Exception as e:
-                print(f"Warning: Failed to initialize wandb: {e}")
-                self.wandb_run = None
+                print(f"Warning: Failed to initialize MLFlow: {e}")
+                self.mlflow_run = None
     
     def _setup_model(self):
         """Setup model and loss function"""
