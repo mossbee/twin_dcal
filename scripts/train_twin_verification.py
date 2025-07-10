@@ -337,18 +337,21 @@ def main():
     if not check_requirements():
         print("Continuing despite warnings...")
     
-    # Determine world size
+    # Get configuration first to check intended WORLD_SIZE
+    config = get_config(args.config)
+    
+    # Determine world size based on configuration and command line args
     if args.local_rank != -1:
         # Launched with torch.distributed.launch
         world_size = int(os.environ.get('WORLD_SIZE', 1))
         rank = int(os.environ.get('RANK', 0))
     elif args.world_size is not None:
-        # Manual specification
+        # Manual specification via command line
         world_size = args.world_size
         rank = 0  # Will be overridden in spawn
     else:
-        # Auto-detect based on available GPUs
-        world_size = torch.cuda.device_count() if torch.cuda.is_available() else 1
+        # Use configuration's WORLD_SIZE (respects single_gpu config)
+        world_size = config.WORLD_SIZE
         rank = 0
     
     print(f"Training setup: world_size={world_size}, local_rank={args.local_rank}")
@@ -366,12 +369,39 @@ def main():
             distributed_main(rank, world_size, args)
         else:
             # Use mp.spawn to launch distributed training
-            mp.spawn(
-                distributed_main,
-                args=(world_size, args),
-                nprocs=world_size,
-                join=True
-            )
+            try:
+                # Set multiprocessing start method to 'spawn' if not set
+                if mp.get_start_method(allow_none=True) is None:
+                    mp.set_start_method('spawn')
+                
+                mp.spawn(
+                    distributed_main,
+                    args=(world_size, args),
+                    nprocs=world_size,
+                    join=True
+                )
+            except AttributeError as e:
+                print(f"Error: multiprocessing.spawn not available: {e}")
+                print("Falling back to single GPU training...")
+                single_gpu_main(0, args)
+            except RuntimeError as e:
+                if "spawn" in str(e).lower():
+                    print(f"Error with spawn method: {e}")
+                    print("Trying to set spawn method explicitly...")
+                    try:
+                        mp.set_start_method('spawn', force=True)
+                        mp.spawn(
+                            distributed_main,
+                            args=(world_size, args),
+                            nprocs=world_size,
+                            join=True
+                        )
+                    except Exception as e2:
+                        print(f"Still failed: {e2}")
+                        print("Falling back to single GPU training...")
+                        single_gpu_main(0, args)
+                else:
+                    raise
 
 
 if __name__ == '__main__':
