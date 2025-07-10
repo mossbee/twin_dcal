@@ -1,0 +1,12 @@
+# ignore all pycache pyc files
+__pycache__/
+*.pyc
+
+# ignore all venv
+venv/
+
+# ignore all logs
+logs/
+
+# ignore all checkpoints
+checkpoints/
