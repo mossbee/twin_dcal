@@ -22,7 +22,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 from tqdm import tqdm
 
-from ..models.dcal_verification_model import create_dcal_model, DCALVerificationModel
+from models.dcal_verification_model import create_dcal_model, DCALVerificationModel
 
 
 class TwinInferenceEngine:

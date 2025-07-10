@@ -29,7 +29,7 @@ import numpy as np
 import mlflow
 import mlflow.pytorch
 
-from ..models.dcal_verification_model import create_dcal_model, count_parameters
+from models.dcal_verification_model import create_dcal_model, count_parameters
 from .verification_losses import VerificationLoss
 from .twin_data_loader import create_data_loaders
 

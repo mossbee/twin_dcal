@@ -12,9 +12,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional, Dict, Any, Tuple
 
-from ..modules.backbone import VisionTransformerBackbone, create_vit_backbone
-from ..modules.transformer import DCALEncoder
-from ..modules.attention import AttentionRollout
+from modules.backbone import VisionTransformerBackbone, create_vit_backbone
+from modules.transformer import DCALEncoder
+from modules.attention import AttentionRollout
 
 
 class VerificationHead(nn.Module):

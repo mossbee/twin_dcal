@@ -282,11 +282,51 @@ class TwinVerificationConfig:
         expected_seq_len = (self.INPUT_SIZE // self.PATCH_SIZE) ** 2 + 1  # +1 for CLS
         assert self.SEQUENCE_LENGTH == expected_seq_len
         
-        # Check GPU availability
-        for gpu in self.GPUS:
-            if gpu.startswith('cuda'):
-                gpu_id = int(gpu.split(':')[1])
-                assert gpu_id < torch.cuda.device_count(), f"GPU {gpu} not available"
+        # Check GPU availability (only if CUDA devices are specified)
+        if torch.cuda.is_available():
+            for gpu in self.GPUS:
+                if gpu.startswith('cuda'):
+                    gpu_id = int(gpu.split(':')[1])
+                    assert gpu_id < torch.cuda.device_count(), f"GPU {gpu} not available"
+        else:
+            # CPU-only environment - warn if CUDA devices are specified
+            if any(gpu.startswith('cuda') for gpu in self.GPUS):
+                print("WARNING: CUDA devices specified but CUDA not available, will use CPU")
+
+    def auto_detect_hardware(self) -> 'TwinVerificationConfig':
+        """Auto-detect available hardware and adjust configuration accordingly"""
+        if torch.cuda.is_available():
+            # GPU available - use original GPU configuration
+            available_gpus = torch.cuda.device_count()
+            if available_gpus >= 2:
+                # Multi-GPU setup (server environment)
+                self.WORLD_SIZE = 2
+                self.GPUS = ["cuda:0", "cuda:1"]
+                self.BATCH_SIZE_PER_GPU = 8
+                self.TOTAL_BATCH_SIZE = 16
+                print(f"Auto-detected: Multi-GPU setup with {available_gpus} GPUs")
+            else:
+                # Single GPU setup
+                self.WORLD_SIZE = 1
+                self.GPUS = ["cuda:0"]
+                self.BATCH_SIZE_PER_GPU = 4  # Smaller batch for single GPU
+                self.TOTAL_BATCH_SIZE = 4
+                self.EFFECTIVE_BATCH_SIZE = 32  # Increase gradient accumulation
+                self.GRADIENT_ACCUMULATION = 8
+                print(f"Auto-detected: Single GPU setup")
+        else:
+            # CPU-only setup (laptop environment)
+            self.WORLD_SIZE = 1
+            self.GPUS = ["cpu"]
+            self.BATCH_SIZE_PER_GPU = 2  # Very small batch for CPU
+            self.TOTAL_BATCH_SIZE = 2
+            self.EFFECTIVE_BATCH_SIZE = 8  # Small effective batch for testing
+            self.GRADIENT_ACCUMULATION = 4
+            self.MIXED_PRECISION = False  # Disable mixed precision on CPU
+            self.COMPILE_MODEL = False  # Disable compilation on CPU
+            print("Auto-detected: CPU-only setup (development environment)")
+        
+        return self
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary for logging"""
@@ -335,7 +375,7 @@ def get_single_gpu_config() -> TwinVerificationConfig:
     
     # Single GPU settings
     config.WORLD_SIZE = 1
-    config.GPUS = ["cuda:0"]
+    config.GPUS = ["cpu"]
     config.BATCH_SIZE_PER_GPU = 4
     config.TOTAL_BATCH_SIZE = 4
     config.EFFECTIVE_BATCH_SIZE = 32  # Increase gradient accumulation
@@ -360,6 +400,63 @@ def get_large_model_config() -> TwinVerificationConfig:
     config.EFFECTIVE_BATCH_SIZE = 32
     config.GRADIENT_ACCUMULATION = 4
     
+    return config
+
+
+def get_laptop_config() -> TwinVerificationConfig:
+    """Get configuration optimized for CPU-only laptop development/testing"""
+    config = TwinVerificationConfig()
+    
+    # Hardware settings for CPU
+    config.WORLD_SIZE = 1
+    config.GPUS = ["cpu"]
+    config.BATCH_SIZE_PER_GPU = 2  # Very small for CPU
+    config.TOTAL_BATCH_SIZE = 2
+    config.EFFECTIVE_BATCH_SIZE = 8
+    config.GRADIENT_ACCUMULATION = 4
+    
+    # Disable GPU-specific optimizations
+    config.MIXED_PRECISION = False
+    config.COMPILE_MODEL = False
+    
+    # Reduce model complexity for faster CPU testing
+    config.EPOCHS = 2  # Very few epochs for testing
+    config.SA_BLOCKS = 6  # Smaller model
+    config.GLCA_BLOCKS = 1
+    config.PWCA_BLOCKS = 6
+    config.D_MODEL = 384  # Smaller dimension
+    config.NUM_HEADS = 6
+    config.D_FF = 1536
+    
+    # Faster logging for testing
+    config.LOG_FREQ = 5
+    config.SAVE_FREQ = 1
+    config.VIS_FREQ = 20
+    
+    print("Laptop configuration loaded: CPU-only, small model for testing")
+    return config
+
+
+def get_server_config() -> TwinVerificationConfig:
+    """Get configuration optimized for 2x RTX 2080Ti GPU server"""
+    config = TwinVerificationConfig()
+    
+    # Use auto-detection but ensure GPU settings
+    config = config.auto_detect_hardware()
+    
+    # Server-specific optimizations
+    config.MIXED_PRECISION = True
+    config.COMPILE_MODEL = True
+    
+    print("Server configuration loaded: Multi-GPU optimized")
+    return config
+
+
+def get_auto_config() -> TwinVerificationConfig:
+    """Get configuration that automatically adapts to available hardware"""
+    config = TwinVerificationConfig()
+    config = config.auto_detect_hardware()
+    config.validate_config()
     return config
 
 
