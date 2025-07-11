@@ -353,6 +353,9 @@ def get_kaggle_config() -> TwinVerificationConfig:
     config.GRADIENT_ACCUMULATION = 10  # Higher accumulation to maintain effective batch size
     config.EFFECTIVE_BATCH_SIZE = 60   # 6 * 10 accumulation steps
     
+    # Disable model compilation for Kaggle compatibility (avoids PyTorch Dynamo issues)
+    config.COMPILE_MODEL = False
+    
     # WandB tracking for Kaggle
     config.TRACKING_MODE = "wandb"
     config.WANDB_PROJECT = "twin-face-verification-kaggle"
@@ -384,6 +387,9 @@ def get_kaggle_distributed_config() -> TwinVerificationConfig:
     config.TOTAL_BATCH_SIZE = 12   # 6 * 2 GPUs
     config.GRADIENT_ACCUMULATION = 5  # Effective batch size = 60
     config.EFFECTIVE_BATCH_SIZE = 60
+    
+    # Disable model compilation for Kaggle compatibility (avoids PyTorch Dynamo issues)
+    config.COMPILE_MODEL = False
     
     # WandB tracking for Kaggle
     config.TRACKING_MODE = "wandb"
