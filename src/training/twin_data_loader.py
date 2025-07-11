@@ -468,7 +468,8 @@ def create_data_loaders(config,
         pin_memory=config.PIN_MEMORY,
         persistent_workers=config.PERSISTENT_WORKERS,
         prefetch_factor=config.PREFETCH_FACTOR,
-        drop_last=True
+        drop_last=True,
+        collate_fn=collate_verification_batch
     )
     
     val_loader = DataLoader(
@@ -480,7 +481,8 @@ def create_data_loaders(config,
         pin_memory=config.PIN_MEMORY,
         persistent_workers=config.PERSISTENT_WORKERS,
         prefetch_factor=config.PREFETCH_FACTOR,
-        drop_last=False
+        drop_last=False,
+        collate_fn=collate_verification_batch
     )
     
     test_loader = DataLoader(
@@ -492,7 +494,8 @@ def create_data_loaders(config,
         pin_memory=config.PIN_MEMORY,
         persistent_workers=config.PERSISTENT_WORKERS,
         prefetch_factor=config.PREFETCH_FACTOR,
-        drop_last=False
+        drop_last=False,
+        collate_fn=collate_verification_batch
     )
     
     return train_loader, val_loader, test_loader
