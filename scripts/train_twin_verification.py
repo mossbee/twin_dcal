@@ -40,6 +40,7 @@ from configs.twin_verification_config import (
     get_single_gpu_config,
     get_kaggle_config,
     get_kaggle_lowmem_config,
+    get_kaggle_minimal_config,
     get_kaggle_distributed_config,
     get_no_tracking_config,
     print_config_summary,
@@ -57,7 +58,7 @@ def parse_arguments():
         '--config', 
         type=str, 
         default='default',
-        choices=['default', 'debug', 'single_gpu', 'kaggle', 'kaggle_lowmem', 'kaggle_distributed', 'no_tracking'],
+        choices=['default', 'debug', 'single_gpu', 'kaggle', 'kaggle_lowmem', 'kaggle_minimal', 'kaggle_distributed', 'no_tracking'],
         help='Configuration preset to use'
     )
     
@@ -174,6 +175,8 @@ def get_config(config_name: str) -> TwinVerificationConfig:
         return get_kaggle_config()
     elif config_name == 'kaggle_lowmem':
         return get_kaggle_lowmem_config()
+    elif config_name == 'kaggle_minimal':
+        return get_kaggle_minimal_config()
     elif config_name == 'kaggle_distributed':
         return get_kaggle_distributed_config()
     elif config_name == 'no_tracking':

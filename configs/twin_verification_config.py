@@ -506,6 +506,70 @@ def get_large_model_config() -> TwinVerificationConfig:
     return config
 
 
+def get_kaggle_minimal_config() -> TwinVerificationConfig:
+    """Ultra-minimal configuration for Kaggle T4 - absolute minimum memory usage"""
+    config = TwinVerificationConfig()
+    
+    # Kaggle single GPU setup
+    config.WORLD_SIZE = 1  
+    config.GPUS = ["cuda:0"]  
+    
+    # Absolute minimal batch size
+    config.BATCH_SIZE_PER_GPU = 1  # Absolute minimum for DCAL
+    config.TOTAL_BATCH_SIZE = 1    
+    config.GRADIENT_ACCUMULATION = 60  # Very high accumulation to maintain effective batch size
+    config.EFFECTIVE_BATCH_SIZE = 60   # 1 * 60 accumulation steps
+    
+    # Reduce input size to save memory (224x224 instead of 448x448)
+    config.INPUT_SIZE = 224
+    config.NUM_PATCHES = 196  # (224/16)^2 = 14^2 = 196
+    config.SEQUENCE_LENGTH = 197  # 196 patches + 1 CLS token
+    
+    # Reduce model dimensions for memory efficiency
+    config.D_MODEL = 512      # Reduced from 768
+    config.NUM_HEADS = 8      # Reduced from 12
+    config.D_FF = 2048        # Reduced from 3072
+    config.FEATURE_DIM = 512 * 2  # Adjusted for smaller D_MODEL
+    
+    # Reduce DCAL blocks for memory
+    config.SA_BLOCKS = 8      # Reduced from 12
+    config.PWCA_BLOCKS = 8    # Reduced from 12 
+    config.GLCA_BLOCKS = 1    # Keep same
+    
+    # Maximum memory optimization
+    config.NUM_WORKERS = 0    # No multiprocessing workers (use main thread)
+    config.PIN_MEMORY = False 
+    config.PERSISTENT_WORKERS = False
+    config.PREFETCH_FACTOR = 1
+    
+    # Disable memory-intensive features
+    config.COMPILE_MODEL = False
+    config.MIXED_PRECISION = True  # Keep this for memory savings
+    config.LOG_ATTENTION_MAPS = False  # Disable attention visualization
+    
+    # WandB tracking
+    config.TRACKING_MODE = "wandb"
+    config.WANDB_PROJECT = "twin-face-verification-kaggle-minimal"
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "minimal-memory", "224x224"]
+    
+    # Kaggle paths
+    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
+    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    config.SAVE_DIR = "/kaggle/working/checkpoints"
+    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
+    
+    # Training schedule
+    config.EPOCHS = 100
+    config.WARMUP_EPOCHS = 10
+    
+    # Reduce logging frequency to save memory
+    config.LOG_FREQ = 200
+    config.VIS_FREQ = 1000
+    config.SAVE_FREQ = 20
+    
+    return config
+
+
 # ============================================================================
 # CONFIGURATION HELPERS
 # ============================================================================
