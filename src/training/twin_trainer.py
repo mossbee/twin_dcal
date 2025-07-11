@@ -386,7 +386,7 @@ class TwinVerificationTrainer:
             labels = batch['labels'].to(self.device, non_blocking=True)
             
             # Forward pass with mixed precision
-            with autocast(enabled=self.config.MIXED_PRECISION):
+            with autocast(device_type='cuda', enabled=self.config.MIXED_PRECISION):
                 outputs = self.model(img1, img2, training=True, return_features=True)
                 loss, loss_stats = self.loss_fn(outputs, labels, epoch=self.epoch)
             
@@ -470,7 +470,7 @@ class TwinVerificationTrainer:
                 labels = batch['labels'].to(self.device, non_blocking=True)
                 
                 # Forward pass
-                with autocast(enabled=self.config.MIXED_PRECISION):
+                with autocast(device_type='cuda', enabled=self.config.MIXED_PRECISION):
                     outputs = self.model(img1, img2, training=False, return_features=True)
                     loss, loss_stats = self.loss_fn(outputs, labels)
                 
