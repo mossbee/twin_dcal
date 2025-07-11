@@ -38,6 +38,8 @@ from configs.twin_verification_config import (
     TwinVerificationConfig, 
     get_debug_config, 
     get_single_gpu_config,
+    get_kaggle_config,
+    get_no_tracking_config,
     print_config_summary,
     save_config
 )
@@ -53,7 +55,7 @@ def parse_arguments():
         '--config', 
         type=str, 
         default='default',
-        choices=['default', 'debug', 'single_gpu', 'large_model'],
+        choices=['default', 'debug', 'single_gpu', 'kaggle', 'no_tracking'],
         help='Configuration preset to use'
     )
     
@@ -119,17 +121,40 @@ def parse_arguments():
         help='Only run validation (requires --resume)'
     )
     
+    # Tracking method override arguments
+    parser.add_argument(
+        '--tracking',
+        type=str,
+        choices=['mlflow', 'wandb', 'none'],
+        default=None,
+        help='Override tracking method from config'
+    )
+    
     parser.add_argument(
         '--mlflow_disabled',
         action='store_true',
-        help='Disable MLFlow logging'
+        help='Disable MLFlow tracking (legacy option, use --tracking none instead)'
     )
     
     parser.add_argument(
         '--mlflow_uri',
         type=str,
-        default=None,  # Changed from 'http://localhost:5000' to None
+        default=None,
         help='MLFlow tracking server URI (if not provided, uses config default)'
+    )
+    
+    parser.add_argument(
+        '--wandb_project',
+        type=str,
+        default=None,
+        help='WandB project name override'
+    )
+    
+    parser.add_argument(
+        '--wandb_entity',
+        type=str,
+        default=None,
+        help='WandB entity (username/team) override'
     )
     
     return parser.parse_args()
@@ -143,6 +168,10 @@ def get_config(config_name: str) -> TwinVerificationConfig:
         return get_single_gpu_config()
     elif config_name == 'default':
         return TwinVerificationConfig()
+    elif config_name == 'kaggle':
+        return get_kaggle_config()
+    elif config_name == 'no_tracking':
+        return get_no_tracking_config()
     else:
         raise ValueError(f"Unknown config: {config_name}")
 
@@ -177,6 +206,16 @@ def setup_environment(args, config):
     # Disable MLFlow if requested
     if args.mlflow_disabled:
         config.MLFLOW_EXPERIMENT_NAME = None
+    
+    # Set tracking method if explicitly provided
+    if args.tracking:
+        config.TRACKING_MODE = args.tracking
+    
+    # Override WandB project/entity if provided
+    if args.wandb_project:
+        config.WANDB_PROJECT = args.wandb_project
+    if args.wandb_entity:
+        config.WANDB_ENTITY = args.wandb_entity
     
     # Validate configuration
     config.validate_config()

@@ -4,12 +4,13 @@
 
 This project implements **Dual Cross-Attention Learning (DCAL)** for identical twin face verification, adapted from fine-grained visual categorization research. The system determines whether two face images belong to the same person, with particular focus on distinguishing between identical twins.
 
-## 🔒 **Privacy-First Design**
+## 🔒 **Privacy-First & Multi-Environment Design**
 
-- **Local-only MLFlow tracking**: No external data transmission
-- **Offline capable**: Works without internet connection  
-- **Data sovereignty**: All training data and models stay on your server
-- **Secure by design**: Replaces cloud-based tracking (wandb) with local MLFlow
+- **Local MLFlow tracking**: No external data transmission for privacy-sensitive environments
+- **Kaggle WandB support**: Cloud-based tracking for Kaggle competitions and experiments  
+- **Flexible tracking**: Three modes - MLFlow, WandB, or none (TensorBoard only)
+- **Offline capable**: Works without internet connection in local mode
+- **Data sovereignty**: Training data never leaves your server in local mode
 
 ## Features
 
@@ -86,17 +87,37 @@ mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_exp
 
 ### 1. Training
 
+#### Local Server (2x RTX 2080Ti) with MLFlow
 ```bash
-# Single GPU training
+# Start local MLFlow server first
+mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
+
+# Multi-GPU training with privacy-compliant tracking
 python scripts/train_twin_verification.py \
-    --config configs/single_gpu \
+    --config default \
     --dataset_info data/dataset_infor.json \
     --twin_pairs data/twin_pairs_infor.json
 
-# Multi-GPU training (2x RTX 2080Ti)
+# Single GPU training
 python scripts/train_twin_verification.py \
-    --config default \
-    --mlflow_uri http://localhost:5000
+    --config single_gpu \
+    --tracking mlflow
+```
+
+#### Kaggle Environment with WandB
+```bash
+# Kaggle training with cloud tracking
+python scripts/train_twin_verification.py \
+    --config kaggle \
+    --wandb_project "twin-face-verification" \
+    --wandb_entity "your-username"
+```
+
+#### No External Tracking (TensorBoard only)
+```bash
+# Privacy-first: no external tracking
+python scripts/train_twin_verification.py \
+    --config no_tracking
 ```
 
 ### 2. Evaluation
@@ -331,37 +352,56 @@ torchrun \
 
 ## Experiment Tracking
 
-### MLFlow (Privacy-Compliant)
+### Three Tracking Modes
 
+#### 1. MLFlow (Privacy-Compliant Local)
 ```bash
 # Start local MLFlow server
 mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
 
-# Train with MLFlow tracking (local only)
+# Train with MLFlow tracking (local only - no external data)
 python scripts/train_twin_verification.py \
-    --config config.json \
-    --mlflow_uri http://localhost:5000
-
-# Disable tracking if needed
-python scripts/train_twin_verification.py \
-    --config config.json \
-    --mlflow_disabled
+    --config default \
+    --tracking mlflow
 ```
 
-### TensorBoard
-
+#### 2. WandB (Cloud-Based for Kaggle)
 ```bash
-# View training logs
+# Train with WandB tracking (for Kaggle environments)
+python scripts/train_twin_verification.py \
+    --config kaggle \
+    --tracking wandb \
+    --wandb_project "twin-face-verification"
+```
+
+#### 3. No External Tracking (TensorBoard Only)
+```bash
+# No external tracking - maximum privacy
+python scripts/train_twin_verification.py \
+    --config default \
+    --tracking none
+```
+
+### TensorBoard (Always Available)
+```bash
+# View training logs locally
 tensorboard --logdir logs/tensorboard/
 ```
 
-### Privacy Notes
+### Environment-Specific Notes
 
-🔒 **All experiment tracking is local-only**:
+#### Local Server (Privacy Mode)
+🔒 **Complete Privacy**:
 - MLFlow server runs locally (no external connections)
 - TensorBoard logs stored locally
 - No sensitive data transmitted externally
 - Complete offline capability
+
+#### Kaggle Environment (Cloud Mode) 
+☁️ **Cloud Integration**:
+- WandB for experiment tracking and collaboration
+- Optimized for Kaggle GPU limits and time constraints
+- Easy sharing and comparison of results
 
 ## Advanced Features
 

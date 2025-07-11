@@ -198,21 +198,32 @@ class TwinVerificationConfig:
     # CHECKPOINTING & LOGGING
     # ============================================================================
     
-    # Model saving
+    # Experiment tracking configuration
+    TRACKING_MODE: str = "mlflow"  # Options: "mlflow", "wandb", "none"
+    
+    # MLFlow configuration (for local privacy-compliant tracking)
+    MLFLOW_TRACKING_URI: str = "http://localhost:5000"  # Local MLFlow server
+    MLFLOW_EXPERIMENT_NAME: str = "twin_face_verification"
+    
+    # WandB configuration (for Kaggle cloud environments)
+    WANDB_PROJECT: str = "twin-face-verification"
+    WANDB_ENTITY: Optional[str] = None  # Your wandb username/team
+    WANDB_RUN_NAME: Optional[str] = None  # Auto-generated if None
+    WANDB_TAGS: List[str] = field(default_factory=lambda: ["dcal", "face-verification", "twins"])
+    
+    # General logging
+    TENSORBOARD_LOG_DIR: str = "logs/tensorboard"
+    LOG_FREQ: int = 100                 # Log every 100 steps
+    LOG_GRAD_NORM: bool = True
+    LOG_ATTENTION_MAPS: bool = True
+    
+    # Checkpointing
     SAVE_DIR: str = "checkpoints"
     SAVE_FREQ: int = 10                 # Save every 10 epochs
     SAVE_BEST_ONLY: bool = False
     BEST_METRIC: str = "verification_accuracy"
     EARLY_STOPPING_PATIENCE: int = 30
-    
-    # Logging
-    LOG_FREQ: int = 100                 # Log every 100 steps
-    MLFLOW_TRACKING_URI: str = "http://107.98.152.63:5000"  # Local MLFlow server
-    MLFLOW_EXPERIMENT_NAME: str = "twin_face_verification"
-    TENSORBOARD_LOG_DIR: str = "logs/tensorboard"
-    LOG_GRAD_NORM: bool = True
-    LOG_ATTENTION_MAPS: bool = True
-    
+
     # Visualization
     VIS_FREQ: int = 500                 # Visualize attention every 500 steps
     NUM_VIS_SAMPLES: int = 4            # Number of samples to visualize
@@ -328,17 +339,66 @@ def get_debug_config() -> TwinVerificationConfig:
     return config
 
 
-def get_single_gpu_config() -> TwinVerificationConfig:
-    """Get configuration for single GPU training"""
+def get_kaggle_config() -> TwinVerificationConfig:
+    """Configuration optimized for Kaggle environments"""
     config = TwinVerificationConfig()
     
-    # Single GPU settings
+    # Kaggle-specific hardware
+    config.WORLD_SIZE = 2  # Kaggle often has 2 GPUs (T4 or P100)
+    config.GPUS = ["cuda:0", "cuda:1"]
+    
+    # Adjust batch size for Kaggle GPU memory
+    config.BATCH_SIZE_PER_GPU = 6  # Slightly smaller for safety
+    config.TOTAL_BATCH_SIZE = 12   # 6 * 2 GPUs
+    config.GRADIENT_ACCUMULATION = 5  # Effective batch size = 60
+    config.EFFECTIVE_BATCH_SIZE = 60
+    
+    # WandB tracking for Kaggle
+    config.TRACKING_MODE = "wandb"
+    config.WANDB_PROJECT = "twin-face-verification-kaggle"
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification"]
+    
+    # Kaggle-specific paths
+    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
+    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    config.SAVE_DIR = "/kaggle/working/checkpoints"
+    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
+    
+    # Reduce epochs for Kaggle time limits
+    config.EPOCHS = 100
+    config.WARMUP_EPOCHS = 10
+    
+    return config
+
+
+def get_single_gpu_config() -> TwinVerificationConfig:
+    """Configuration for single GPU training"""
+    config = TwinVerificationConfig()
+    
+    # Single GPU setup
     config.WORLD_SIZE = 1
     config.GPUS = ["cuda:0"]
-    config.BATCH_SIZE_PER_GPU = 4
+    
+    # Adjust batch sizes
+    config.BATCH_SIZE_PER_GPU = 4  # Smaller for single GPU
     config.TOTAL_BATCH_SIZE = 4
-    config.EFFECTIVE_BATCH_SIZE = 32  # Increase gradient accumulation
-    config.GRADIENT_ACCUMULATION = 8
+    config.GRADIENT_ACCUMULATION = 16  # Higher accumulation to maintain effective batch size
+    config.EFFECTIVE_BATCH_SIZE = 64
+    
+    # Use MLFlow by default
+    config.TRACKING_MODE = "mlflow"
+    
+    return config
+
+
+def get_no_tracking_config() -> TwinVerificationConfig:
+    """Configuration with no external tracking"""
+    config = TwinVerificationConfig()
+    
+    # Disable all tracking
+    config.TRACKING_MODE = "none"
+    config.MLFLOW_EXPERIMENT_NAME = None
+    config.WANDB_PROJECT = None
     
     return config
 

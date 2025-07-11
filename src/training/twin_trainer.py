@@ -4,7 +4,7 @@ Twin Face Verification Trainer
 This module implements the training pipeline for DCAL twin face verification:
 1. Distributed training support
 2. Mixed precision training  
-3. MLFlow experiment tracking (local only - no external data)
+3. Multi-platform experiment tracking: MLFlow (local), WandB (Kaggle), or none
 4. Comprehensive metrics and checkpointing
 """
 
@@ -25,9 +25,19 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import numpy as np
 
-# MLFlow for local experiment tracking only
-import mlflow
-import mlflow.pytorch
+# Experiment tracking imports (conditional)
+try:
+    import mlflow
+    import mlflow.pytorch
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
+
+try:
+    import wandb
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
 
 from models.dcal_verification_model import create_dcal_model, count_parameters
 from .verification_losses import VerificationLoss
@@ -151,39 +161,13 @@ class TwinVerificationTrainer:
         self.val_loader = None
         self.test_loader = None
         
-        # Initialize logging
+        # Initialize logging based on tracking mode
         self.writer = None
         self.mlflow_run = None
+        self.wandb_run = None
         
         if self.is_main_process:
-            # TensorBoard
-            self.writer = SummaryWriter(log_dir=self.config.TENSORBOARD_LOG_DIR)
-            
-            # MLFlow (local only)
-            if self.config.MLFLOW_EXPERIMENT_NAME:
-                try:
-                    # Set tracking URI to local server
-                    mlflow.set_tracking_uri(self.config.MLFLOW_TRACKING_URI)
-                    
-                    # Set experiment
-                    mlflow.set_experiment(self.config.MLFLOW_EXPERIMENT_NAME)
-                    
-                    # Start run
-                    self.mlflow_run = mlflow.start_run(
-                        run_name=f"dcal_twin_verification_{int(time.time())}"
-                    )
-                    
-                    # Log configuration
-                    config_dict = self.config.to_dict()
-                    for key, value in config_dict.items():
-                        if isinstance(value, (int, float, str, bool)):
-                            mlflow.log_param(key, value)
-                    
-                    print(f"MLFlow tracking initialized: {self.config.MLFLOW_TRACKING_URI}")
-                except Exception as e:
-                    print(f"Warning: MLFlow initialization failed: {e}")
-                    print("Training will continue with TensorBoard logging only")
-                    self.mlflow_run = None
+            self._setup_logging()
         
         # Initialize
         self._setup_model()
@@ -191,25 +175,94 @@ class TwinVerificationTrainer:
         self._setup_optimization()
         
     def _setup_logging(self):
-        """Setup logging infrastructure"""
-        if self.is_main_process:
-            # TensorBoard
-            log_dir = os.path.join(self.config.TENSORBOARD_LOG_DIR, f"run_{int(time.time())}")
-            os.makedirs(log_dir, exist_ok=True)
-            self.writer = SummaryWriter(log_dir)
+        """Setup logging infrastructure based on tracking mode"""
+        if not self.is_main_process:
+            return
             
-            # MLFlow (local server already deployed)
-            try:
-                mlflow.set_tracking_uri(self.config.MLFLOW_TRACKING_URI)
-                mlflow.set_experiment(self.config.MLFLOW_EXPERIMENT_NAME)
-                self.mlflow_run = mlflow.start_run(
-                    run_name=f"dcal_twin_verification_{int(time.time())}"
-                )
-                mlflow.log_params(self.config.to_dict())
-                print(f"MLFlow run started: {self.mlflow_run.info.run_id}")
-            except Exception as e:
-                print(f"Warning: Failed to initialize MLFlow: {e}")
-                self.mlflow_run = None
+        # Always setup TensorBoard
+        os.makedirs(self.config.TENSORBOARD_LOG_DIR, exist_ok=True)
+        self.writer = SummaryWriter(log_dir=self.config.TENSORBOARD_LOG_DIR)
+        
+        # Setup tracking based on mode
+        tracking_mode = getattr(self.config, 'TRACKING_MODE', 'mlflow').lower()
+        
+        if tracking_mode == 'mlflow':
+            self._setup_mlflow()
+        elif tracking_mode == 'wandb':
+            self._setup_wandb()
+        elif tracking_mode == 'none':
+            print("Running with no external experiment tracking (TensorBoard only)")
+        else:
+            print(f"Warning: Unknown tracking mode '{tracking_mode}', using TensorBoard only")
+    
+    def _setup_mlflow(self):
+        """Setup MLFlow tracking (local only)"""
+        if not MLFLOW_AVAILABLE:
+            print("Warning: MLFlow not available, falling back to TensorBoard only")
+            return
+            
+        if not hasattr(self.config, 'MLFLOW_EXPERIMENT_NAME') or not self.config.MLFLOW_EXPERIMENT_NAME:
+            print("MLFlow experiment name not set, skipping MLFlow setup")
+            return
+            
+        try:
+            # Set tracking URI to local server
+            mlflow.set_tracking_uri(self.config.MLFLOW_TRACKING_URI)
+            
+            # Set experiment
+            mlflow.set_experiment(self.config.MLFLOW_EXPERIMENT_NAME)
+            
+            # Start run
+            self.mlflow_run = mlflow.start_run(
+                run_name=f"dcal_twin_verification_{int(time.time())}"
+            )
+            
+            # Log configuration
+            config_dict = self.config.to_dict()
+            for key, value in config_dict.items():
+                if isinstance(value, (int, float, str, bool)):
+                    mlflow.log_param(key, value)
+            
+            print(f"MLFlow tracking initialized: {self.config.MLFLOW_TRACKING_URI}")
+            print(f"MLFlow run ID: {self.mlflow_run.info.run_id}")
+            
+        except Exception as e:
+            print(f"Warning: MLFlow initialization failed: {e}")
+            print("Training will continue with TensorBoard logging only")
+            self.mlflow_run = None
+    
+    def _setup_wandb(self):
+        """Setup WandB tracking (for Kaggle/cloud environments)"""
+        if not WANDB_AVAILABLE:
+            print("Warning: WandB not available, falling back to TensorBoard only")
+            return
+            
+        if not hasattr(self.config, 'WANDB_PROJECT') or not self.config.WANDB_PROJECT:
+            print("WandB project name not set, skipping WandB setup")
+            return
+            
+        try:
+            # Initialize WandB
+            wandb_config = {
+                key: value for key, value in self.config.to_dict().items()
+                if isinstance(value, (int, float, str, bool, list))
+            }
+            
+            self.wandb_run = wandb.init(
+                project=self.config.WANDB_PROJECT,
+                entity=getattr(self.config, 'WANDB_ENTITY', None),
+                name=getattr(self.config, 'WANDB_RUN_NAME', None),
+                tags=getattr(self.config, 'WANDB_TAGS', []),
+                config=wandb_config
+            )
+            
+            print(f"WandB tracking initialized: project '{self.config.WANDB_PROJECT}'")
+            print(f"WandB run: {self.wandb_run.name}")
+            
+        except Exception as e:
+            print(f"Warning: WandB initialization failed: {e}")
+            print("Training will continue with TensorBoard logging only")
+            self.wandb_run = None
     
     def _setup_model(self):
         """Setup model and loss function"""
@@ -545,6 +598,11 @@ class TwinVerificationTrainer:
                 'global_step': self.global_step
             })
             mlflow.log_metrics(log_dict, step=self.global_step)
+
+        # WandB (if initialized)
+        if self.wandb_run:
+            wandb.log({f"train_{k}": v for k, v in loss_stats.items()}, step=self.global_step)
+            wandb.log({"train_grad_norm": grad_norm, "train_lr": self.optimizer.param_groups[0]['lr']}, step=self.global_step)
     
     def _log_epoch_metrics(self, train_metrics: Dict[str, float], val_metrics: Dict[str, float]):
         """Log epoch-level metrics"""
@@ -566,6 +624,11 @@ class TwinVerificationTrainer:
             log_dict.update({f'epoch_val_{k}': v for k, v in val_metrics.items()})
             log_dict['epoch'] = self.epoch
             mlflow.log_metrics(log_dict, step=self.epoch)
+
+        # WandB (if initialized)
+        if self.wandb_run:
+            wandb.log({f"epoch_train_{k}": v for k, v in train_metrics.items()}, step=self.epoch)
+            wandb.log({f"epoch_val_{k}": v for k, v in val_metrics.items()}, step=self.epoch)
     
     def save_checkpoint(self, metrics: Dict[str, float], is_best: bool = False):
         """Save model checkpoint"""
@@ -696,6 +759,9 @@ class TwinVerificationTrainer:
         
         if self.mlflow_run:
             mlflow.end_run()
+        
+        if self.wandb_run:
+            wandb.finish()
         
         if self.distributed_trainer:
             self.distributed_trainer.cleanup() 
