@@ -207,7 +207,7 @@ class TwinVerificationConfig:
     
     # WandB configuration (for Kaggle cloud environments)
     WANDB_PROJECT: str = "twin-face-verification"
-    WANDB_ENTITY: Optional[str] = None  # Your wandb username/team
+    WANDB_ENTITY: Optional[str] = 'hunchoquavodb-hanoi-university-of-science-and-technology'  # Your wandb username/team
     WANDB_RUN_NAME: Optional[str] = None  # Auto-generated if None
     WANDB_TAGS: List[str] = field(default_factory=lambda: ["dcal", "face-verification", "twins"])
     
@@ -340,23 +340,55 @@ def get_debug_config() -> TwinVerificationConfig:
 
 
 def get_kaggle_config() -> TwinVerificationConfig:
-    """Configuration optimized for Kaggle environments"""
+    """Configuration optimized for Kaggle environments (single GPU)"""
     config = TwinVerificationConfig()
     
-    # Kaggle-specific hardware
-    config.WORLD_SIZE = 2  # Kaggle often has 2 GPUs (T4 or P100)
+    # Kaggle single GPU setup (avoids mp.spawn issues)
+    config.WORLD_SIZE = 1  # Single GPU to avoid distributed training issues
+    config.GPUS = ["cuda:0"]  # Use first GPU only
+    
+    # Adjust batch size for single GPU but maintain effective batch size
+    config.BATCH_SIZE_PER_GPU = 6  # Good size for T4 GPU memory 
+    config.TOTAL_BATCH_SIZE = 6    # 6 * 1 GPU
+    config.GRADIENT_ACCUMULATION = 10  # Higher accumulation to maintain effective batch size
+    config.EFFECTIVE_BATCH_SIZE = 60   # 6 * 10 accumulation steps
+    
+    # WandB tracking for Kaggle
+    config.TRACKING_MODE = "wandb"
+    config.WANDB_PROJECT = "twin-face-verification-kaggle"
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification"]
+    
+    # Kaggle-specific paths
+    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
+    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    config.SAVE_DIR = "/kaggle/working/checkpoints"
+    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
+    
+    # Reduce epochs for Kaggle time limits
+    config.EPOCHS = 100
+    config.WARMUP_EPOCHS = 10
+    
+    return config
+
+
+def get_kaggle_distributed_config() -> TwinVerificationConfig:
+    """Configuration for Kaggle distributed training (advanced - requires torch.distributed.launch)"""
+    config = TwinVerificationConfig()
+    
+    # Kaggle distributed setup (for advanced users only)
+    config.WORLD_SIZE = 2  # Use both Kaggle GPUs
     config.GPUS = ["cuda:0", "cuda:1"]
     
-    # Adjust batch size for Kaggle GPU memory
-    config.BATCH_SIZE_PER_GPU = 6  # Slightly smaller for safety
+    # Adjust batch size for distributed training
+    config.BATCH_SIZE_PER_GPU = 6  # Good size for T4 GPU memory 
     config.TOTAL_BATCH_SIZE = 12   # 6 * 2 GPUs
     config.GRADIENT_ACCUMULATION = 5  # Effective batch size = 60
     config.EFFECTIVE_BATCH_SIZE = 60
     
     # WandB tracking for Kaggle
     config.TRACKING_MODE = "wandb"
-    config.WANDB_PROJECT = "twin-face-verification-kaggle"
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification"]
+    config.WANDB_PROJECT = "twin-face-verification-kaggle-distributed"
+    config.WANDB_TAGS = ["dcal", "kaggle", "distributed", "twins", "face-verification"]
     
     # Kaggle-specific paths
     config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
