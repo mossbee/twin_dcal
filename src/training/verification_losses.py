@@ -354,13 +354,21 @@ class CombinedLoss(nn.Module):
         
         # 1. Verification BCE Loss
         if verification_score is not None:
-            bce_loss = self.bce_loss(verification_score, targets)
+            # Ensure verification_score and targets have compatible shapes
+            verification_score_squeezed = verification_score.squeeze(-1)  # [batch_size, 1] -> [batch_size]
+            targets_for_bce = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
+            
+            bce_loss = self.bce_loss(verification_score_squeezed, targets_for_bce)
             total_loss += self.adaptive_weights['bce'] * bce_loss
             loss_stats['bce_loss'] = bce_loss.item()
         
         # 2. Focal Loss (for hard examples)
         if verification_score is not None:
-            focal_loss, focal_stats = self.focal_loss(verification_score, targets)
+            # Focal loss also needs matching shapes
+            verification_score_squeezed = verification_score.squeeze(-1)  # [batch_size, 1] -> [batch_size]
+            targets_for_focal = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
+            
+            focal_loss, focal_stats = self.focal_loss(verification_score_squeezed, targets_for_focal)
             total_loss += self.adaptive_weights['focal'] * focal_loss
             loss_stats.update({f'focal_{k}': v for k, v in focal_stats.items()})
         
@@ -419,7 +427,10 @@ class CombinedLoss(nn.Module):
         if sa_feat1 is not None and sa_feat2 is not None:
             sa_similarity = F.cosine_similarity(sa_feat1, sa_feat2, dim=1, keepdim=True)
             sa_similarity = (sa_similarity + 1) / 2  # Convert to [0, 1]
-            sa_loss = self.bce_loss(sa_similarity, targets)
+            # Ensure compatible shapes for BCE loss
+            sa_similarity_squeezed = sa_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
+            targets_for_sa = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
+            sa_loss = self.bce_loss(sa_similarity_squeezed, targets_for_sa)
             branch_losses['sa'] = (sa_loss, {'loss': sa_loss.item()})
         
         # GLCA branch loss
@@ -428,7 +439,10 @@ class CombinedLoss(nn.Module):
         if glca_feat1 is not None and glca_feat2 is not None:
             glca_similarity = F.cosine_similarity(glca_feat1, glca_feat2, dim=1, keepdim=True)
             glca_similarity = (glca_similarity + 1) / 2  # Convert to [0, 1]
-            glca_loss = self.bce_loss(glca_similarity, targets)
+            # Ensure compatible shapes for BCE loss
+            glca_similarity_squeezed = glca_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
+            targets_for_glca = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
+            glca_loss = self.bce_loss(glca_similarity_squeezed, targets_for_glca)
             branch_losses['glca'] = (glca_loss, {'loss': glca_loss.item()})
         
         # PWCA branch loss (training only)
@@ -437,7 +451,10 @@ class CombinedLoss(nn.Module):
         if pwca_feat1 is not None and pwca_feat2 is not None:
             pwca_similarity = F.cosine_similarity(pwca_feat1, pwca_feat2, dim=1, keepdim=True)
             pwca_similarity = (pwca_similarity + 1) / 2  # Convert to [0, 1]
-            pwca_loss = self.bce_loss(pwca_similarity, targets)
+            # Ensure compatible shapes for BCE loss
+            pwca_similarity_squeezed = pwca_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
+            targets_for_pwca = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
+            pwca_loss = self.bce_loss(pwca_similarity_squeezed, targets_for_pwca)
             branch_losses['pwca'] = (pwca_loss, {'loss': pwca_loss.item()})
         
         return branch_losses
