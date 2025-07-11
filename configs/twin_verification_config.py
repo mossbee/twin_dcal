@@ -340,18 +340,23 @@ def get_debug_config() -> TwinVerificationConfig:
 
 
 def get_kaggle_config() -> TwinVerificationConfig:
-    """Configuration optimized for Kaggle environments (single GPU)"""
+    """Configuration optimized for Kaggle T4 GPU memory constraints"""
     config = TwinVerificationConfig()
     
     # Kaggle single GPU setup (avoids mp.spawn issues)
     config.WORLD_SIZE = 1  # Single GPU to avoid distributed training issues
     config.GPUS = ["cuda:0"]  # Use first GPU only
     
-    # Adjust batch size for single GPU but maintain effective batch size
-    config.BATCH_SIZE_PER_GPU = 6  # Good size for T4 GPU memory 
-    config.TOTAL_BATCH_SIZE = 6    # 6 * 1 GPU
-    config.GRADIENT_ACCUMULATION = 10  # Higher accumulation to maintain effective batch size
-    config.EFFECTIVE_BATCH_SIZE = 60   # 6 * 10 accumulation steps
+    # Optimized batch size for T4 GPU memory constraints (15GB total, ~14.7GB usable)
+    config.BATCH_SIZE_PER_GPU = 3  # Reduced for DCAL+PWCA memory requirements
+    config.TOTAL_BATCH_SIZE = 3    # 3 * 1 GPU
+    config.GRADIENT_ACCUMULATION = 20  # Higher accumulation to maintain effective batch size
+    config.EFFECTIVE_BATCH_SIZE = 60   # 3 * 20 accumulation steps
+    
+    # Memory optimization for T4
+    config.NUM_WORKERS = 2  # Reduce workers to save memory
+    config.PIN_MEMORY = False  # Disable to save memory
+    config.PERSISTENT_WORKERS = False  # Disable to save memory
     
     # Disable model compilation for Kaggle compatibility (avoids PyTorch Dynamo issues)
     config.COMPILE_MODEL = False
@@ -359,7 +364,7 @@ def get_kaggle_config() -> TwinVerificationConfig:
     # WandB tracking for Kaggle
     config.TRACKING_MODE = "wandb"
     config.WANDB_PROJECT = "twin-face-verification-kaggle"
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification"]
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "t4-optimized"]
     
     # Kaggle-specific paths
     config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
@@ -368,6 +373,47 @@ def get_kaggle_config() -> TwinVerificationConfig:
     config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
     
     # Reduce epochs for Kaggle time limits
+    config.EPOCHS = 100
+    config.WARMUP_EPOCHS = 10
+    
+    return config
+
+
+def get_kaggle_lowmem_config() -> TwinVerificationConfig:
+    """Ultra-low memory configuration for Kaggle T4 when standard config still fails"""
+    config = TwinVerificationConfig()
+    
+    # Kaggle single GPU setup (ultra memory-conservative)
+    config.WORLD_SIZE = 1  
+    config.GPUS = ["cuda:0"]  
+    
+    # Ultra-conservative batch size for maximum memory safety
+    config.BATCH_SIZE_PER_GPU = 2  # Minimal batch size for DCAL
+    config.TOTAL_BATCH_SIZE = 2    
+    config.GRADIENT_ACCUMULATION = 30  # Very high accumulation to maintain effective batch size
+    config.EFFECTIVE_BATCH_SIZE = 60   # 2 * 30 accumulation steps
+    
+    # Maximum memory optimization
+    config.NUM_WORKERS = 1  # Minimal workers
+    config.PIN_MEMORY = False  # No pinned memory
+    config.PERSISTENT_WORKERS = False  # No persistent workers
+    config.PREFETCH_FACTOR = 1  # Minimal prefetching
+    
+    # Disable model compilation
+    config.COMPILE_MODEL = False
+    
+    # WandB tracking
+    config.TRACKING_MODE = "wandb"
+    config.WANDB_PROJECT = "twin-face-verification-kaggle-lowmem"
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "ultra-low-memory"]
+    
+    # Kaggle paths
+    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
+    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    config.SAVE_DIR = "/kaggle/working/checkpoints"
+    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
+    
+    # Training schedule
     config.EPOCHS = 100
     config.WARMUP_EPOCHS = 10
     
