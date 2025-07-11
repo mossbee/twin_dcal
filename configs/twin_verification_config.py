@@ -570,6 +570,75 @@ def get_kaggle_minimal_config() -> TwinVerificationConfig:
     return config
 
 
+def get_kaggle_lite_config() -> TwinVerificationConfig:
+    """DCAL-Lite configuration for Kaggle T4 - removes most PWCA blocks to reduce memory"""
+    config = TwinVerificationConfig()
+    
+    # Kaggle single GPU setup
+    config.WORLD_SIZE = 1  
+    config.GPUS = ["cuda:0"]  
+    
+    # Conservative batch size
+    config.BATCH_SIZE_PER_GPU = 2  # Slightly higher than minimal
+    config.TOTAL_BATCH_SIZE = 2    
+    config.GRADIENT_ACCUMULATION = 30  # Maintain effective batch size
+    config.EFFECTIVE_BATCH_SIZE = 60   # 2 * 30 accumulation steps
+    
+    # Keep 224x224 for face details
+    config.INPUT_SIZE = 224
+    config.NUM_PATCHES = 196  # (224/16)^2 = 14^2 = 196
+    config.SEQUENCE_LENGTH = 197  # 196 patches + 1 CLS token
+    
+    # Moderate model dimensions 
+    config.D_MODEL = 512      
+    config.NUM_HEADS = 8      
+    config.D_FF = 2048        
+    config.FEATURE_DIM = 512 * 2  
+    
+    # DCAL-Lite: Drastically reduce PWCA blocks (main memory consumer)
+    config.SA_BLOCKS = 8      # Self-attention blocks
+    config.PWCA_BLOCKS = 2    # Only 2 PWCA blocks instead of 12 (huge memory saving)
+    config.GLCA_BLOCKS = 1    # Keep GLCA for local-global interaction
+    
+    # Adjust loss weights for fewer PWCA blocks
+    config.LOSS_WEIGHTS = {
+        "triplet": 0.4,
+        "bce": 0.4, 
+        "focal": 0.2,
+        "sa_weight": 1.0,
+        "glca_weight": 1.0,
+        "pwca_weight": 0.1  # Reduced weight since fewer PWCA blocks
+    }
+    
+    # Memory optimization
+    config.NUM_WORKERS = 2    
+    config.PIN_MEMORY = False 
+    config.PERSISTENT_WORKERS = False
+    config.PREFETCH_FACTOR = 1
+    
+    # Disable memory-intensive features
+    config.COMPILE_MODEL = False
+    config.MIXED_PRECISION = True  
+    config.LOG_ATTENTION_MAPS = False  
+    
+    # WandB tracking
+    config.TRACKING_MODE = "wandb"
+    config.WANDB_PROJECT = "twin-face-verification-dcal-lite"
+    config.WANDB_TAGS = ["dcal-lite", "kaggle", "twins", "face-verification", "memory-optimized"]
+    
+    # Kaggle paths
+    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
+    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    config.SAVE_DIR = "/kaggle/working/checkpoints"
+    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
+    
+    # Training schedule
+    config.EPOCHS = 100
+    config.WARMUP_EPOCHS = 10
+    
+    return config
+
+
 # ============================================================================
 # CONFIGURATION HELPERS
 # ============================================================================
