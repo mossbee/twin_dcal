@@ -475,7 +475,8 @@ class TwinVerificationTrainer:
                     loss, loss_stats = self.loss_fn(outputs, labels)
                 
                 # Collect predictions and labels
-                predictions = outputs['verification_score'].cpu().numpy()
+                # Convert logits to probabilities for metrics computation
+                predictions = torch.sigmoid(outputs['verification_score']).cpu().numpy()
                 labels_np = labels.cpu().numpy()
                 
                 all_predictions.extend(predictions)

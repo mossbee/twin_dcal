@@ -172,8 +172,8 @@ class FocalLoss(nn.Module):
         Compute focal loss
         
         Args:
-            predictions: Predicted probabilities [batch_size, 1]
-            targets: Binary targets [batch_size, 1]
+            predictions: Predicted logits [batch_size] (raw logits, not probabilities)
+            targets: Binary targets [batch_size]
             
         Returns:
             loss: Focal loss
@@ -182,11 +182,14 @@ class FocalLoss(nn.Module):
         # Ensure targets are same shape as predictions
         targets = targets.view_as(predictions)
         
-        # Compute binary cross entropy
-        bce_loss = F.binary_cross_entropy(predictions, targets, reduction='none')
+        # Compute binary cross entropy with logits (autocast-safe)
+        bce_loss = F.binary_cross_entropy_with_logits(predictions, targets, reduction='none')
+        
+        # Convert logits to probabilities for focal weight computation
+        probs = torch.sigmoid(predictions)
         
         # Compute focal weight
-        p_t = predictions * targets + (1 - predictions) * (1 - targets)
+        p_t = probs * targets + (1 - probs) * (1 - targets)
         alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
         focal_weight = alpha_t * (1 - p_t) ** self.gamma
         
@@ -316,7 +319,7 @@ class CombinedLoss(nn.Module):
         # Individual loss functions
         self.triplet_loss = TripletLoss(margin=config.TRIPLET_MARGIN)
         self.focal_loss = FocalLoss(alpha=config.FOCAL_ALPHA, gamma=config.FOCAL_GAMMA)
-        self.bce_loss = nn.BCELoss()
+        self.bce_loss = nn.BCEWithLogitsLoss()  # Use BCEWithLogitsLoss for autocast safety
         
         # Loss weights
         self.loss_weights = config.LOSS_WEIGHTS.copy()
@@ -426,7 +429,7 @@ class CombinedLoss(nn.Module):
         sa_feat2 = features2.get('sa_features')
         if sa_feat1 is not None and sa_feat2 is not None:
             sa_similarity = F.cosine_similarity(sa_feat1, sa_feat2, dim=1, keepdim=True)
-            sa_similarity = (sa_similarity + 1) / 2  # Convert to [0, 1]
+            # Don't normalize to [0,1] for BCEWithLogitsLoss - use raw similarity as logits
             # Ensure compatible shapes for BCE loss
             sa_similarity_squeezed = sa_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
             targets_for_sa = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
@@ -438,7 +441,7 @@ class CombinedLoss(nn.Module):
         glca_feat2 = features2.get('glca_features')
         if glca_feat1 is not None and glca_feat2 is not None:
             glca_similarity = F.cosine_similarity(glca_feat1, glca_feat2, dim=1, keepdim=True)
-            glca_similarity = (glca_similarity + 1) / 2  # Convert to [0, 1]
+            # Don't normalize to [0,1] for BCEWithLogitsLoss - use raw similarity as logits
             # Ensure compatible shapes for BCE loss
             glca_similarity_squeezed = glca_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
             targets_for_glca = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
@@ -450,7 +453,7 @@ class CombinedLoss(nn.Module):
         pwca_feat2 = features2.get('pwca_features')
         if pwca_feat1 is not None and pwca_feat2 is not None:
             pwca_similarity = F.cosine_similarity(pwca_feat1, pwca_feat2, dim=1, keepdim=True)
-            pwca_similarity = (pwca_similarity + 1) / 2  # Convert to [0, 1]
+            # Don't normalize to [0,1] for BCEWithLogitsLoss - use raw similarity as logits
             # Ensure compatible shapes for BCE loss
             pwca_similarity_squeezed = pwca_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
             targets_for_pwca = targets.squeeze(-1) if targets.dim() > 1 else targets  # Ensure 1D
@@ -528,7 +531,7 @@ class VerificationLoss(nn.Module):
         elif config.LOSS_TYPE == "focal":
             self.loss_fn = FocalLoss(alpha=config.FOCAL_ALPHA, gamma=config.FOCAL_GAMMA)
         elif config.LOSS_TYPE == "bce":
-            self.loss_fn = nn.BCELoss()
+            self.loss_fn = nn.BCEWithLogitsLoss()  # Use BCEWithLogitsLoss for autocast safety
         else:
             raise ValueError(f"Unknown loss type: {config.LOSS_TYPE}")
     

@@ -53,10 +53,10 @@ class VerificationHead(nn.Module):
             ])
             input_dim = hidden_dim
         
-        # Final verification layer
+        # Final verification layer (no sigmoid - BCEWithLogitsLoss will apply it)
         layers.extend([
-            nn.Linear(input_dim, 1),
-            nn.Sigmoid()
+            nn.Linear(input_dim, 1)
+            # Removed nn.Sigmoid() since BCEWithLogitsLoss applies it internally
         ])
         
         self.classifier = nn.Sequential(*layers)
@@ -77,7 +77,7 @@ class VerificationHead(nn.Module):
             mode: "classification" or "distance"
             
         Returns:
-            verification_score: [batch_size, 1] similarity score (0-1)
+            verification_score: [batch_size, 1] similarity logits (raw values before sigmoid)
         """
         if mode == "classification":
             # Classification-based verification
@@ -106,8 +106,8 @@ class VerificationHead(nn.Module):
             # Compute cosine similarity
             cosine_sim = torch.sum(feat_a * feat_b, dim=1, keepdim=True)
             
-            # Convert to probability using learned threshold
-            verification_score = torch.sigmoid((cosine_sim - self.distance_threshold) * 10)
+            # Convert to logits using learned threshold (no sigmoid - BCEWithLogitsLoss will apply it)
+            verification_score = (cosine_sim - self.distance_threshold) * 10
             
         else:
             raise ValueError(f"Unknown verification mode: {mode}")
@@ -329,18 +329,22 @@ class DCALVerificationModel(nn.Module):
             mode: Verification mode ("classification" or "distance")
             
         Returns:
-            similarity_scores: [batch_size, 1]
+            similarity_scores: [batch_size, 1] - probabilities between 0 and 1
         """
         self.eval()
         with torch.no_grad():
             features1 = self.extract_features(img1, training=False)
             features2 = self.extract_features(img2, training=False)
             
-            similarity = self.verification_head(
+            # Get raw logits
+            logits = self.verification_head(
                 features1['combined_features'],
                 features2['combined_features'],
                 mode=mode
             )
+            
+            # Convert logits to probabilities for similarity scores
+            similarity = torch.sigmoid(logits)
         
         return similarity
 
