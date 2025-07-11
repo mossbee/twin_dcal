@@ -314,8 +314,9 @@ class TwinVerificationConfig:
 # Create default configuration instance
 default_config = TwinVerificationConfig()
 
-# Validate default configuration
-default_config.validate_config()
+# Don't validate at module load time - only validate when config is actually used
+# This allows single GPU setups to work without the default 2-GPU config failing validation
+# default_config.validate_config()  # Commented out to allow single GPU imports
 
 
 # ============================================================================
