@@ -60,7 +60,7 @@ Combined loss with weights:
 - ✅ Distributed training setup
 - ✅ MLFlow local tracking
 - ✅ Data loading and preprocessing
-- ❌ WandB integration for Kaggle
+- ✅ WandB integration for Kaggle
 - ✅ Verification metrics and evaluation
 
 ## Key Files
@@ -74,13 +74,15 @@ Combined loss with weights:
 ```bash
 # Setup
 pip install -r requirements.txt
-mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
 
-# Train locally
+# Train locally (MLFlow already deployed)
 python scripts/train_twin_verification.py --config default
 
-# Train on Kaggle (needs WandB integration)
-python scripts/train_twin_verification.py --config kaggle --wandb_project twin-faces
+# Train on Kaggle (WandB already configured)
+python scripts/train_twin_verification.py --config kaggle
+
+# No external tracking
+python scripts/train_twin_verification.py --config no_tracking
 ```
 
 ## Evaluation Metrics

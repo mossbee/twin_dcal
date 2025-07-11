@@ -46,15 +46,17 @@ The DCAL model consists of:
 git clone https://github.com/your-repo/twin-dcal.git
 cd twin-dcal
 
-# Install dependencies (privacy-focused - no external tracking)
+# Install dependencies
 pip install -r requirements.txt
 
 # Install package
 pip install -e .
 
-# Setup local MLFlow server (privacy-compliant)
-mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
+# Verify installation
+python test_model.py
 ```
+
+**Note**: MLFlow server is already deployed and WandB credentials are pre-configured. You can start training immediately.
 
 ### Detailed Installation
 
@@ -70,54 +72,55 @@ mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_exp
    pip install -r requirements.txt
    ```
 
-3. **Privacy-Compliant Tracking Setup**
-   ```bash
-   # Start local MLFlow server (no external data transmission)
-   mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
-   
-   # Access MLFlow UI at: http://localhost:5000
-   ```
-
-4. **Verify Installation**
+3. **Verify Installation**
    ```bash
    python test_model.py
    ```
+
+**All tracking systems are pre-configured:**
+- ✅ MLFlow server: Already deployed and accessible
+- ✅ WandB credentials: Pre-configured in config files  
+- ✅ TensorBoard: Works out of the box
 
 ## Quick Start
 
 ### 1. Training
 
-#### Local Server (2x RTX 2080Ti) with MLFlow
-```bash
-# Start local MLFlow server first
-mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
+The system supports three tracking methods that you can choose at runtime. All credentials are pre-configured.
 
-# Multi-GPU training with privacy-compliant tracking
+#### Choose Your Tracking Method
+
+```bash
+# MLFlow tracking (privacy-compliant, server already deployed)
 python scripts/train_twin_verification.py \
     --config default \
-    --dataset_info data/dataset_infor.json \
-    --twin_pairs data/twin_pairs_infor.json
-
-# Single GPU training
-python scripts/train_twin_verification.py \
-    --config single_gpu \
     --tracking mlflow
+
+# WandB tracking (for Kaggle/cloud environments)
+python scripts/train_twin_verification.py \
+    --config default \
+    --tracking wandb
+
+# No external tracking (TensorBoard only)
+python scripts/train_twin_verification.py \
+    --config default \
+    --tracking none
 ```
 
-#### Kaggle Environment with WandB
-```bash
-# Kaggle training with cloud tracking
-python scripts/train_twin_verification.py \
-    --config kaggle \
-    --wandb_project "twin-face-verification" \
-    --wandb_entity "your-username"
-```
+#### Environment-Specific Training
 
-#### No External Tracking (TensorBoard only)
 ```bash
-# Privacy-first: no external tracking
-python scripts/train_twin_verification.py \
-    --config no_tracking
+# Local Server (2x RTX 2080Ti) - MLFlow already configured
+python scripts/train_twin_verification.py --config default
+
+# Kaggle Environment - WandB already configured  
+python scripts/train_twin_verification.py --config kaggle
+
+# Single GPU
+python scripts/train_twin_verification.py --config single_gpu
+
+# No tracking (maximum privacy)
+python scripts/train_twin_verification.py --config no_tracking
 ```
 
 ### 2. Evaluation
@@ -352,14 +355,13 @@ torchrun \
 
 ## Experiment Tracking
 
-### Three Tracking Modes
+### Choose Your Tracking Method at Runtime
+
+All tracking systems are pre-configured. Simply choose your preferred method:
 
 #### 1. MLFlow (Privacy-Compliant Local)
 ```bash
-# Start local MLFlow server
-mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
-
-# Train with MLFlow tracking (local only - no external data)
+# MLFlow server already deployed - just use it
 python scripts/train_twin_verification.py \
     --config default \
     --tracking mlflow
@@ -367,16 +369,15 @@ python scripts/train_twin_verification.py \
 
 #### 2. WandB (Cloud-Based for Kaggle)
 ```bash
-# Train with WandB tracking (for Kaggle environments)
+# WandB credentials already configured
 python scripts/train_twin_verification.py \
     --config kaggle \
-    --tracking wandb \
-    --wandb_project "twin-face-verification"
+    --tracking wandb
 ```
 
 #### 3. No External Tracking (TensorBoard Only)
 ```bash
-# No external tracking - maximum privacy
+# Maximum privacy - no external connections
 python scripts/train_twin_verification.py \
     --config default \
     --tracking none
@@ -387,6 +388,15 @@ python scripts/train_twin_verification.py \
 # View training logs locally
 tensorboard --logdir logs/tensorboard/
 ```
+
+### Default Configurations
+
+Each environment has a default tracking method, but you can override:
+
+- **`--config default`**: Uses MLFlow by default
+- **`--config kaggle`**: Uses WandB by default  
+- **`--config no_tracking`**: No external tracking
+- **Override any config**: Use `--tracking [mlflow|wandb|none]`
 
 ### Environment-Specific Notes
 

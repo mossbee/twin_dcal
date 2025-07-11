@@ -1,17 +1,18 @@
 # Training Examples for Different Environments
 
-## Local Server (2x RTX 2080Ti) with MLFlow
+**All tracking systems are pre-configured. Just choose your method at runtime.**
 
-### Standard Training
+## Local Server (2x RTX 2080Ti)
+
+### Standard Training (MLFlow already configured)
 ```bash
-# Start MLFlow server first
-mlflow server --host localhost --port 5000 --backend-store-uri file:./mlflow_experiments
+# MLFlow server already deployed - just train
+python scripts/train_twin_verification.py --config default
 
-# Train with MLFlow tracking
+# Or explicitly specify MLFlow
 python scripts/train_twin_verification.py \
     --config default \
-    --dataset_info data/dataset_infor.json \
-    --twin_pairs data/twin_pairs_infor.json
+    --tracking mlflow
 ```
 
 ### Single GPU Training
@@ -27,14 +28,12 @@ python scripts/train_twin_verification.py \
     --config no_tracking
 ```
 
-## Kaggle Environment with WandB
+## Kaggle Environment
 
-### Basic Kaggle Training
+### Basic Kaggle Training (WandB already configured)
 ```bash
-python scripts/train_twin_verification.py \
-    --config kaggle \
-    --wandb_project "twin-face-verification" \
-    --wandb_entity "your-username"
+# WandB credentials pre-configured
+python scripts/train_twin_verification.py --config kaggle
 ```
 
 ### Kaggle with Custom Paths
@@ -42,8 +41,7 @@ python scripts/train_twin_verification.py \
 python scripts/train_twin_verification.py \
     --config kaggle \
     --dataset_info "/kaggle/input/twin-dataset/dataset_infor.json" \
-    --twin_pairs "/kaggle/input/twin-dataset/twin_pairs_infor.json" \
-    --wandb_project "twin-verification-experiment-1"
+    --twin_pairs "/kaggle/input/twin-dataset/twin_pairs_infor.json"
 ```
 
 ## Mixed Environment Training
@@ -102,17 +100,17 @@ python -m torch.distributed.launch \
 
 ## Environment-Specific Notes
 
-### Local Server Requirements
-- MLFlow server running on localhost:5000
-- 2x RTX 2080Ti GPUs available
-- Local dataset in `data/` directory
+### Local Server
+- ✅ MLFlow server: Already deployed and accessible
+- ✅ 2x RTX 2080Ti GPUs: Ready to use
+- ✅ Dataset: Located in `data/` directory
 
-### Kaggle Requirements  
-- WandB account and API key
-- Dataset uploaded to Kaggle Datasets
-- T4 x2 or P100 GPU runtime
+### Kaggle Environment  
+- ✅ WandB credentials: Pre-configured in config files
+- ✅ Dataset: Upload to Kaggle Datasets and use kaggle config
+- ✅ GPU Runtime: Works with T4 x2 or P100
 
 ### Available Tracking Methods
-1. **MLFlow**: `--tracking mlflow` (local privacy-compliant)
-2. **WandB**: `--tracking wandb` (cloud-based for Kaggle)
-3. **None**: `--tracking none` (TensorBoard only) 
+1. **MLFlow**: `--tracking mlflow` (local privacy-compliant, already deployed)
+2. **WandB**: `--tracking wandb` (cloud-based, credentials configured)
+3. **None**: `--tracking none` (TensorBoard only, maximum privacy) 
