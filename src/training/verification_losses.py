@@ -428,7 +428,7 @@ class CombinedLoss(nn.Module):
         sa_feat1 = features1.get('sa_features')
         sa_feat2 = features2.get('sa_features')
         if sa_feat1 is not None and sa_feat2 is not None:
-            sa_similarity = F.cosine_similarity(sa_feat1, sa_feat2, dim=1, keepdim=True)
+            sa_similarity = F.cosine_similarity(sa_feat1, sa_feat2, dim=1).unsqueeze(-1)  # Add dimension back
             # Don't normalize to [0,1] for BCEWithLogitsLoss - use raw similarity as logits
             # Ensure compatible shapes for BCE loss
             sa_similarity_squeezed = sa_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
@@ -440,7 +440,7 @@ class CombinedLoss(nn.Module):
         glca_feat1 = features1.get('glca_features')
         glca_feat2 = features2.get('glca_features')
         if glca_feat1 is not None and glca_feat2 is not None:
-            glca_similarity = F.cosine_similarity(glca_feat1, glca_feat2, dim=1, keepdim=True)
+            glca_similarity = F.cosine_similarity(glca_feat1, glca_feat2, dim=1).unsqueeze(-1)  # Add dimension back
             # Don't normalize to [0,1] for BCEWithLogitsLoss - use raw similarity as logits
             # Ensure compatible shapes for BCE loss
             glca_similarity_squeezed = glca_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
@@ -452,7 +452,7 @@ class CombinedLoss(nn.Module):
         pwca_feat1 = features1.get('pwca_features')
         pwca_feat2 = features2.get('pwca_features')
         if pwca_feat1 is not None and pwca_feat2 is not None:
-            pwca_similarity = F.cosine_similarity(pwca_feat1, pwca_feat2, dim=1, keepdim=True)
+            pwca_similarity = F.cosine_similarity(pwca_feat1, pwca_feat2, dim=1).unsqueeze(-1)  # Add dimension back
             # Don't normalize to [0,1] for BCEWithLogitsLoss - use raw similarity as logits
             # Ensure compatible shapes for BCE loss
             pwca_similarity_squeezed = pwca_similarity.squeeze(-1)  # [batch_size, 1] -> [batch_size]
