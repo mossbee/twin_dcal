@@ -464,7 +464,23 @@ class CombinedLoss(nn.Module):
     
     def _compute_regularization_loss(self, model_outputs: Dict[str, Any]) -> torch.Tensor:
         """Compute regularization losses"""
-        reg_loss = torch.tensor(0.0)
+        # Initialize reg_loss on the same device as the model outputs
+        # Find the first tensor in model_outputs to get the device
+        device = torch.device('cpu')  # Default fallback
+        for value in model_outputs.values():
+            if isinstance(value, torch.Tensor):
+                device = value.device
+                break
+            elif isinstance(value, dict):
+                # If it's a nested dict (like features1, features2), look inside
+                for nested_value in value.values():
+                    if isinstance(nested_value, torch.Tensor):
+                        device = nested_value.device
+                        break
+                if device != torch.device('cpu'):
+                    break
+        
+        reg_loss = torch.tensor(0.0, device=device)
         
         # Add attention diversity regularization
         features1 = model_outputs.get('features1', {})
@@ -478,7 +494,7 @@ class CombinedLoss(nn.Module):
             # Attention entropy (higher entropy = more diverse attention)
             cls_attention = attention_rollout[:, 0, 1:]  # CLS attention to patches
             attention_entropy = -(cls_attention * torch.log(cls_attention + 1e-8)).sum(dim=1)
-            target_entropy = math.log(seq_len - 1)  # Maximum entropy
+            target_entropy = torch.tensor(math.log(seq_len - 1), device=attention_rollout.device)  # Maximum entropy as tensor
             
             # Penalty for low entropy (too focused attention)
             entropy_penalty = F.relu(target_entropy * 0.5 - attention_entropy).mean()
