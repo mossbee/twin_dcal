@@ -362,8 +362,9 @@ def get_kaggle_config() -> TwinVerificationConfig:
     # Disable model compilation for Kaggle compatibility (avoids PyTorch Dynamo issues)
     config.COMPILE_MODEL = False
     
-    # WandB tracking for Kaggle
-    config.TRACKING_MODE = "wandb"
+    # For Kaggle environments, disable tracking by default to avoid authentication issues
+    # User can override with --tracking wandb if they have WANDB_API_KEY set up
+    config.TRACKING_MODE = "none"  # Changed from "wandb" to avoid auth prompts
     config.WANDB_PROJECT = "twin-face-verification-kaggle"
     config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "t4-optimized"]
     
@@ -403,8 +404,9 @@ def get_kaggle_lowmem_config() -> TwinVerificationConfig:
     # Disable model compilation
     config.COMPILE_MODEL = False
     
-    # WandB tracking
-    config.TRACKING_MODE = "wandb"
+    # For Kaggle environments, disable tracking by default to avoid authentication issues
+    # User can override with --tracking wandb if they have WANDB_API_KEY set up
+    config.TRACKING_MODE = "none"  # Changed from "wandb" to avoid auth prompts
     config.WANDB_PROJECT = "twin-face-verification-kaggle-lowmem"
     config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "ultra-low-memory"]
     
@@ -548,8 +550,9 @@ def get_kaggle_minimal_config() -> TwinVerificationConfig:
     config.MIXED_PRECISION = True  # Keep this for memory savings
     config.LOG_ATTENTION_MAPS = False  # Disable attention visualization
     
-    # WandB tracking
-    config.TRACKING_MODE = "wandb"
+    # For Kaggle environments, disable tracking by default to avoid authentication issues
+    # User can override with --tracking wandb if they have WANDB_API_KEY set up
+    config.TRACKING_MODE = "none"  # Changed from "wandb" to avoid auth prompts
     config.WANDB_PROJECT = "twin-face-verification-kaggle-minimal"
     config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "minimal-memory", "224x224"]
     
@@ -622,8 +625,9 @@ def get_kaggle_lite_config() -> TwinVerificationConfig:
     config.MIXED_PRECISION = True  
     config.LOG_ATTENTION_MAPS = False  
     
-    # WandB tracking
-    config.TRACKING_MODE = "wandb"
+    # For Kaggle environments, disable tracking by default to avoid authentication issues
+    # User can override with --tracking wandb if they have WANDB_API_KEY set up
+    config.TRACKING_MODE = "none"  # Changed from "wandb" to avoid auth prompts
     config.WANDB_PROJECT = "twin-face-verification-dcal-lite"
     config.WANDB_TAGS = ["dcal-lite", "kaggle", "twins", "face-verification", "memory-optimized"]
     
