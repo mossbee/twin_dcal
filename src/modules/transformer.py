@@ -166,8 +166,10 @@ class GLCABlock(nn.Module):
             batch_indices = torch.arange(batch_size, device=x.device).unsqueeze(1).expand(-1, actual_num_local)
             selected_indices = top_indices[:, :actual_num_local]
             
-            # Vectorized assignment: full_local_out[batch_indices, selected_indices] = local_out[:, :actual_num_local]
-            full_local_out[batch_indices, selected_indices] = local_out[:, :actual_num_local]
+            # Vectorized assignment with dtype consistency for mixed precision
+            # Ensure local_out matches full_local_out dtype to avoid autocast mismatches
+            local_out_slice = local_out[:, :actual_num_local].to(full_local_out.dtype)
+            full_local_out[batch_indices, selected_indices] = local_out_slice
         
         # Residual connection with learnable weight
         x_local = x + self.alpha * self.dropout(full_local_out)
