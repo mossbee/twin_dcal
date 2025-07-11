@@ -19,7 +19,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -240,9 +240,9 @@ class TwinVerificationTrainer:
         # Loss function
         self.loss_fn = VerificationLoss(self.config)
         
-        # Mixed precision scaler
+        # Initialize mixed precision scaler if enabled
         if self.config.MIXED_PRECISION:
-            self.scaler = GradScaler()
+            self.scaler = GradScaler('cuda')
     
     def _setup_data(self):
         """Setup data loaders"""

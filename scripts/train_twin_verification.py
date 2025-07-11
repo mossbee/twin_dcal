@@ -128,8 +128,8 @@ def parse_arguments():
     parser.add_argument(
         '--mlflow_uri',
         type=str,
-        default='http://localhost:5000',
-        help='MLFlow tracking server URI'
+        default=None,  # Changed from 'http://localhost:5000' to None
+        help='MLFlow tracking server URI (if not provided, uses config default)'
     )
     
     return parser.parse_args()
@@ -170,8 +170,8 @@ def setup_environment(args, config):
     if args.output_dir:
         config.SAVE_DIR = args.output_dir
     
-    # Set MLFlow URI if provided
-    if args.mlflow_uri:
+    # Set MLFlow URI if explicitly provided (don't override config default)
+    if args.mlflow_uri is not None:
         config.MLFLOW_TRACKING_URI = args.mlflow_uri
     
     # Disable MLFlow if requested
