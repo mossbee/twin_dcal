@@ -65,7 +65,12 @@ def parse_arguments():
         '--config', 
         type=str, 
         default='default',
-        choices=['default', 'debug', 'single_gpu', 'kaggle', 'kaggle_lowmem', 'kaggle_minimal', 'kaggle_lite', 'kaggle_distributed', 'no_tracking'],
+        choices=[
+            'default', 'debug', 'single_gpu', 'kaggle', 'kaggle_lowmem', 
+            'kaggle_minimal', 'kaggle_lite', 'kaggle_p100', 'kaggle_p100_fast',
+            'kaggle_p100_minimal', 'kaggle_p100_data_optimized', 'local_2080ti_fast',
+            'kaggle_distributed', 'no_tracking'
+        ],
         help='Configuration preset to use'
     )
     
