@@ -664,8 +664,8 @@ def get_kaggle_p100_config() -> TwinVerificationConfig:
     config.PERSISTENT_WORKERS = True  # Keep workers alive
     config.PREFETCH_FACTOR = 4  # Higher prefetch for better pipeline
     
-    # Enable model compilation for P100 (should work better than T4)
-    config.COMPILE_MODEL = True
+    # Disable model compilation for P100 (CUDA capability 6.0 < 7.0 required by Triton)
+    config.COMPILE_MODEL = False
     
     # WandB tracking for Kaggle
     config.TRACKING_MODE = "wandb"
