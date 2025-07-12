@@ -874,3 +874,83 @@ def load_config(load_path: str) -> TwinVerificationConfig:
         config_dict = json.load(f)
     
     return TwinVerificationConfig.from_dict(config_dict) 
+
+
+def get_kaggle_p100_ultra_conservative_config() -> TwinVerificationConfig:
+    """Ultra-conservative P100 configuration - guaranteed to fit in memory"""
+    config = TwinVerificationConfig()
+    
+    # Kaggle single GPU setup
+    config.WORLD_SIZE = 1
+    config.GPUS = ["cuda:0"]
+    
+    # Ultra-conservative batch size
+    config.BATCH_SIZE_PER_GPU = 4  # Very small batch
+    config.TOTAL_BATCH_SIZE = 4
+    config.GRADIENT_ACCUMULATION = 15  # High accumulation to maintain effective batch
+    config.EFFECTIVE_BATCH_SIZE = 60  # 4 * 15
+    
+    # Smallest viable input size
+    config.INPUT_SIZE = 224
+    config.NUM_PATCHES = 196  # (224/16)^2 = 14^2 = 196
+    config.SEQUENCE_LENGTH = 197  # 196 patches + 1 CLS token
+    
+    # Minimal model dimensions
+    config.D_MODEL = 384      # Even smaller
+    config.NUM_HEADS = 6      # Fewer heads
+    config.D_FF = 1536        # Smaller FFN
+    config.FEATURE_DIM = 384 * 2  # Adjusted for smaller D_MODEL
+    
+    # Absolute minimal DCAL blocks
+    config.SA_BLOCKS = 3      # Minimum for SA
+    config.GLCA_BLOCKS = 1    # Keep GLCA (core contribution)
+    config.PWCA_BLOCKS = 2    # Minimum PWCA blocks
+    
+    # Ultra-conservative data loading
+    config.NUM_WORKERS = 2
+    config.PIN_MEMORY = False
+    config.PERSISTENT_WORKERS = False
+    config.PREFETCH_FACTOR = 1
+    
+    # Disable everything possible
+    config.COMPILE_MODEL = False
+    config.MIXED_PRECISION = True  # Keep for memory savings
+    config.LOG_ATTENTION_MAPS = False
+    config.STOCHASTIC_DEPTH = 0.0  # Disable
+    config.DROPOUT = 0.0  # Disable
+    
+    # Simplified loss function
+    config.LOSS_WEIGHTS = {
+        "triplet": 0.0,  # Remove triplet loss (expensive)
+        "bce": 1.0,      # Only use BCE
+        "focal": 0.0,    # Remove focal loss
+        "sa_weight": 1.0,
+        "glca_weight": 1.0,
+        "pwca_weight": 0.1  # Minimal PWCA weight
+    }
+    
+    # Faster training
+    config.EPOCHS = 50  # Fewer epochs
+    config.WARMUP_EPOCHS = 2
+    config.LR = 1e-4
+    config.OPTIMIZER = "AdamW"
+    config.SCHEDULER = "cosine_warmup"
+    
+    # Minimal logging
+    config.LOG_FREQ = 100
+    config.VIS_FREQ = 2000
+    config.SAVE_FREQ = 10
+    
+    # WandB tracking
+    config.TRACKING_MODE = "wandb"
+    config.WANDB_PROJECT = "dcal-twin-verification"
+    config.WANDB_ENTITY = "hunchoquavodb-hanoi-university-of-science-and-technology"
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-ultra-conservative", "224x224"]
+    
+    # Kaggle paths
+    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
+    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    config.SAVE_DIR = "/kaggle/working/checkpoints"
+    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
+    
+    return config 

@@ -46,6 +46,7 @@ from configs.twin_verification_config import (
     get_kaggle_p100_fast_config,
     get_kaggle_p100_minimal_config,
     get_kaggle_p100_data_optimized_config,
+    get_kaggle_p100_ultra_conservative_config,
     get_local_2080ti_fast_config,
     get_kaggle_distributed_config,
     get_no_tracking_config,
@@ -68,8 +69,8 @@ def parse_arguments():
         choices=[
             'default', 'debug', 'single_gpu', 'kaggle', 'kaggle_lowmem', 
             'kaggle_minimal', 'kaggle_lite', 'kaggle_p100', 'kaggle_p100_fast',
-            'kaggle_p100_minimal', 'kaggle_p100_data_optimized', 'local_2080ti_fast',
-            'kaggle_distributed', 'no_tracking'
+            'kaggle_p100_minimal', 'kaggle_p100_data_optimized', 'kaggle_p100_ultra_conservative',
+            'local_2080ti_fast', 'kaggle_distributed', 'no_tracking'
         ],
         help='Configuration preset to use'
     )
@@ -199,6 +200,8 @@ def get_config(config_name: str) -> TwinVerificationConfig:
         return get_kaggle_p100_minimal_config()
     elif config_name == 'kaggle_p100_data_optimized':
         return get_kaggle_p100_data_optimized_config()
+    elif config_name == 'kaggle_p100_ultra_conservative':
+        return get_kaggle_p100_ultra_conservative_config()
     elif config_name == 'local_2080ti_fast':
         return get_local_2080ti_fast_config()
     elif config_name == 'kaggle_distributed':
