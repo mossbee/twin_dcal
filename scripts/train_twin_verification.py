@@ -42,10 +42,16 @@ from configs.twin_verification_config import (
     get_kaggle_lowmem_config,
     get_kaggle_minimal_config,
     get_kaggle_lite_config,
+    get_kaggle_p100_config,
+    get_kaggle_p100_fast_config,
+    get_kaggle_p100_minimal_config,
+    get_kaggle_p100_data_optimized_config,
+    get_local_2080ti_fast_config,
     get_kaggle_distributed_config,
     get_no_tracking_config,
     print_config_summary,
-    save_config
+    save_config,
+    load_config
 )
 from training.twin_trainer import DistributedTrainer, TwinVerificationTrainer
 from training.twin_data_loader import calculate_dataset_stats, estimate_pair_counts
@@ -180,6 +186,16 @@ def get_config(config_name: str) -> TwinVerificationConfig:
         return get_kaggle_minimal_config()
     elif config_name == 'kaggle_lite':
         return get_kaggle_lite_config()
+    elif config_name == 'kaggle_p100':
+        return get_kaggle_p100_config()
+    elif config_name == 'kaggle_p100_fast':
+        return get_kaggle_p100_fast_config()
+    elif config_name == 'kaggle_p100_minimal':
+        return get_kaggle_p100_minimal_config()
+    elif config_name == 'kaggle_p100_data_optimized':
+        return get_kaggle_p100_data_optimized_config()
+    elif config_name == 'local_2080ti_fast':
+        return get_local_2080ti_fast_config()
     elif config_name == 'kaggle_distributed':
         return get_kaggle_distributed_config()
     elif config_name == 'no_tracking':

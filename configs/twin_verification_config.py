@@ -644,6 +644,193 @@ def get_kaggle_lite_config() -> TwinVerificationConfig:
     return config
 
 
+def get_kaggle_p100_config() -> TwinVerificationConfig:
+    """Configuration optimized for Kaggle P100 GPU (16GB memory)"""
+    config = TwinVerificationConfig()
+    
+    # Kaggle single GPU setup
+    config.WORLD_SIZE = 1
+    config.GPUS = ["cuda:0"]
+    
+    # P100 optimized batch size (16GB allows much larger batches than T4)
+    config.BATCH_SIZE_PER_GPU = 8  # 2.7x larger than T4 config
+    config.TOTAL_BATCH_SIZE = 8
+    config.GRADIENT_ACCUMULATION = 8  # Lower accumulation for faster updates
+    config.EFFECTIVE_BATCH_SIZE = 64  # 8 * 8 accumulation steps
+    
+    # P100 optimized settings
+    config.NUM_WORKERS = 4  # P100 can handle more workers
+    config.PIN_MEMORY = True  # Enable for better throughput
+    config.PERSISTENT_WORKERS = True  # Keep workers alive
+    config.PREFETCH_FACTOR = 4  # Higher prefetch for better pipeline
+    
+    # Enable model compilation for P100 (should work better than T4)
+    config.COMPILE_MODEL = True
+    
+    # WandB tracking for Kaggle
+    config.TRACKING_MODE = "wandb"
+    config.WANDB_PROJECT = "dcal-twin-verification-p100"
+    config.WANDB_ENTITY = "hunchoquavodb-hanoi-university-of-science-and-technology"
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-optimized"]
+    
+    # Kaggle paths
+    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
+    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    config.SAVE_DIR = "/kaggle/working/checkpoints"
+    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
+    
+    # Reduce epochs for Kaggle time limits but make each epoch more effective
+    config.EPOCHS = 100
+    config.WARMUP_EPOCHS = 5  # Shorter warmup with larger batches
+    
+    return config
+
+
+def get_kaggle_p100_fast_config() -> TwinVerificationConfig:
+    """Ultra-fast configuration for P100 with reduced model complexity"""
+    config = get_kaggle_p100_config()
+    
+    # Reduce DCAL complexity for speed
+    config.SA_BLOCKS = 6  # Half the SA blocks
+    config.GLCA_BLOCKS = 1  # Keep GLCA
+    config.PWCA_BLOCKS = 6  # Half the PWCA blocks
+    
+    # Larger batch size with reduced model
+    config.BATCH_SIZE_PER_GPU = 12  # Even larger batch
+    config.TOTAL_BATCH_SIZE = 12
+    config.GRADIENT_ACCUMULATION = 6  # Lower accumulation
+    config.EFFECTIVE_BATCH_SIZE = 72  # 12 * 6
+    
+    # Faster data loading
+    config.NUM_WORKERS = 6
+    config.PREFETCH_FACTOR = 6
+    
+    # Reduce some precision for speed
+    config.LOCAL_QUERY_RATIO = 0.10  # Less local attention computation
+    
+    # Update learning rate for larger effective batch
+    config.EFFECTIVE_BATCH_SIZE = 72
+    
+    # Aggressive logging reduction
+    config.LOG_FREQ = 50  # More frequent logging to see progress
+    config.VIS_FREQ = 1000  # Less frequent visualization
+    
+    # Tags for tracking
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-fast", "reduced-complexity"]
+    
+    return config
+
+
+def get_kaggle_p100_minimal_config() -> TwinVerificationConfig:
+    """Minimal complexity configuration for maximum speed"""
+    config = get_kaggle_p100_config()
+    
+    # Minimal DCAL complexity
+    config.SA_BLOCKS = 4  # Much fewer SA blocks
+    config.GLCA_BLOCKS = 1  # Keep GLCA for the paper's core contribution
+    config.PWCA_BLOCKS = 4  # Much fewer PWCA blocks
+    
+    # Maximum batch size for minimal model
+    config.BATCH_SIZE_PER_GPU = 16  # Very large batch
+    config.TOTAL_BATCH_SIZE = 16
+    config.GRADIENT_ACCUMULATION = 4  # Minimal accumulation
+    config.EFFECTIVE_BATCH_SIZE = 64  # 16 * 4
+    
+    # Simplified loss (remove some expensive losses)
+    config.LOSS_WEIGHTS = {
+        "triplet": 0.0,  # Remove triplet loss (expensive)
+        "bce": 0.7,      # Focus on main verification loss
+        "focal": 0.3,    # Keep focal for hard examples
+        "sa_weight": 1.0,
+        "glca_weight": 1.0,
+        "pwca_weight": 0.1  # Minimal PWCA weight
+    }
+    
+    # Faster optimization
+    config.OPTIMIZER = "AdamW"
+    config.SCHEDULER = "cosine_warmup"
+    config.WARMUP_EPOCHS = 3
+    
+    # Reduce some computational overhead
+    config.STOCHASTIC_DEPTH = 0.05  # Less stochastic depth
+    config.CLIP_GRAD_NORM = 0.5  # Less aggressive clipping
+    
+    # Tags for tracking
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-minimal", "ultra-fast"]
+    
+    return config
+
+
+def get_kaggle_p100_data_optimized_config() -> TwinVerificationConfig:
+    """P100 config with optimized data loading and caching"""
+    config = get_kaggle_p100_config()
+    
+    # Optimized data loading
+    config.NUM_WORKERS = 8  # More workers for data loading
+    config.PREFETCH_FACTOR = 8  # High prefetch
+    config.PERSISTENT_WORKERS = True  # Keep workers alive
+    config.PIN_MEMORY = True  # Faster GPU transfer
+    
+    # Batch size optimized for data throughput
+    config.BATCH_SIZE_PER_GPU = 10
+    config.TOTAL_BATCH_SIZE = 10
+    config.GRADIENT_ACCUMULATION = 6
+    config.EFFECTIVE_BATCH_SIZE = 60
+    
+    # Disable some expensive augmentations
+    config.MIXUP_PROB = 0.0  # Disable mixup for speed
+    config.ROTATION_DEGREES = 0  # Disable rotation
+    config.COLOR_JITTER_BRIGHTNESS = 0.0  # Disable color jitter
+    config.COLOR_JITTER_CONTRAST = 0.0
+    
+    # Reduce validation frequency
+    config.SAVE_FREQ = 20  # Less frequent saving
+    config.LOG_FREQ = 25  # More frequent progress logging
+    
+    # Tags for tracking
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-data-optimized"]
+    
+    return config
+
+
+def get_local_2080ti_fast_config() -> TwinVerificationConfig:
+    """Fast configuration for local 2x RTX 2080Ti setup"""
+    config = TwinVerificationConfig()
+    
+    # Distributed setup
+    config.WORLD_SIZE = 2
+    config.GPUS = ["cuda:0", "cuda:1"]
+    
+    # Optimized batch size for speed
+    config.BATCH_SIZE_PER_GPU = 6  # Smaller per GPU but distributed
+    config.TOTAL_BATCH_SIZE = 12   # 6 * 2 GPUs
+    config.GRADIENT_ACCUMULATION = 5  # Lower accumulation
+    config.EFFECTIVE_BATCH_SIZE = 60  # 12 * 5
+    
+    # Reduced model complexity
+    config.SA_BLOCKS = 8  # Fewer SA blocks
+    config.GLCA_BLOCKS = 1  # Keep GLCA
+    config.PWCA_BLOCKS = 8  # Fewer PWCA blocks
+    
+    # Local MLFlow tracking
+    config.TRACKING_MODE = "mlflow"
+    config.MLFLOW_TRACKING_URI = "http://localhost:5000"
+    config.MLFLOW_EXPERIMENT_NAME = "twin_face_verification_fast"
+    
+    # Optimized data loading
+    config.NUM_WORKERS = 6
+    config.PREFETCH_FACTOR = 4
+    config.PERSISTENT_WORKERS = True
+    config.PIN_MEMORY = True
+    
+    # Faster training schedule
+    config.EPOCHS = 150
+    config.WARMUP_EPOCHS = 10
+    config.LOG_FREQ = 50
+    
+    return config
+
+
 # ============================================================================
 # CONFIGURATION HELPERS
 # ============================================================================
