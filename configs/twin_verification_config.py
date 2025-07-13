@@ -340,89 +340,6 @@ def get_debug_config() -> TwinVerificationConfig:
     return config
 
 
-def get_kaggle_config() -> TwinVerificationConfig:
-    """Configuration optimized for Kaggle T4 GPU memory constraints"""
-    config = TwinVerificationConfig()
-    
-    # Kaggle single GPU setup (avoids mp.spawn issues)
-    config.WORLD_SIZE = 1  # Single GPU to avoid distributed training issues
-    config.GPUS = ["cuda:0"]  # Use first GPU only
-    
-    # Optimized batch size for T4 GPU memory constraints (15GB total, ~14.7GB usable)
-    config.BATCH_SIZE_PER_GPU = 3  # Reduced for DCAL+PWCA memory requirements
-    config.TOTAL_BATCH_SIZE = 3    # 3 * 1 GPU
-    config.GRADIENT_ACCUMULATION = 20  # Higher accumulation to maintain effective batch size
-    config.EFFECTIVE_BATCH_SIZE = 60   # 3 * 20 accumulation steps
-    
-    # Memory optimization for T4
-    config.NUM_WORKERS = 2  # Reduce workers to save memory
-    config.PIN_MEMORY = False  # Disable to save memory
-    config.PERSISTENT_WORKERS = False  # Disable to save memory
-    
-    # Disable model compilation for Kaggle compatibility (avoids PyTorch Dynamo issues)
-    config.COMPILE_MODEL = False
-    
-    # WandB tracking for Kaggle (API key should be in Kaggle secrets as WANDB_API_KEY)
-    config.TRACKING_MODE = "wandb"
-    config.WANDB_PROJECT = "dcal-twin-verification"
-    config.WANDB_ENTITY = "hunchoquavodb-hanoi-university-of-science-and-technology"
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "t4-optimized"]
-    
-    # Kaggle-specific paths
-    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
-    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
-    config.SAVE_DIR = "/kaggle/working/checkpoints"
-    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
-    
-    # Reduce epochs for Kaggle time limits
-    config.EPOCHS = 100
-    config.WARMUP_EPOCHS = 10
-    
-    return config
-
-
-def get_kaggle_lowmem_config() -> TwinVerificationConfig:
-    """Ultra-low memory configuration for Kaggle T4 when standard config still fails"""
-    config = TwinVerificationConfig()
-    
-    # Kaggle single GPU setup (ultra memory-conservative)
-    config.WORLD_SIZE = 1  
-    config.GPUS = ["cuda:0"]  
-    
-    # Ultra-conservative batch size for maximum memory safety
-    config.BATCH_SIZE_PER_GPU = 2  # Minimal batch size for DCAL
-    config.TOTAL_BATCH_SIZE = 2    
-    config.GRADIENT_ACCUMULATION = 30  # Very high accumulation to maintain effective batch size
-    config.EFFECTIVE_BATCH_SIZE = 60   # 2 * 30 accumulation steps
-    
-    # Maximum memory optimization
-    config.NUM_WORKERS = 1  # Minimal workers
-    config.PIN_MEMORY = False  # No pinned memory
-    config.PERSISTENT_WORKERS = False  # No persistent workers
-    config.PREFETCH_FACTOR = 1  # Minimal prefetching
-    
-    # Disable model compilation
-    config.COMPILE_MODEL = False
-    
-    # WandB tracking for Kaggle (API key should be in Kaggle secrets as WANDB_API_KEY)
-    config.TRACKING_MODE = "wandb"
-    config.WANDB_PROJECT = "dcal-twin-verification"
-    config.WANDB_ENTITY = "hunchoquavodb-hanoi-university-of-science-and-technology"
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "ultra-low-memory"]
-    
-    # Kaggle paths
-    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
-    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
-    config.SAVE_DIR = "/kaggle/working/checkpoints"
-    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
-    
-    # Training schedule
-    config.EPOCHS = 100
-    config.WARMUP_EPOCHS = 10
-    
-    return config
-
-
 def get_kaggle_distributed_config() -> TwinVerificationConfig:
     """Configuration for Kaggle distributed training (advanced - requires torch.distributed.launch)"""
     config = TwinVerificationConfig()
@@ -474,102 +391,6 @@ def get_single_gpu_config() -> TwinVerificationConfig:
     
     # Use MLFlow by default
     config.TRACKING_MODE = "mlflow"
-    
-    return config
-
-
-def get_no_tracking_config() -> TwinVerificationConfig:
-    """Configuration with no external tracking"""
-    config = TwinVerificationConfig()
-    
-    # Disable all tracking
-    config.TRACKING_MODE = "none"
-    config.MLFLOW_EXPERIMENT_NAME = None
-    config.WANDB_PROJECT = None
-    
-    return config
-
-
-def get_large_model_config() -> TwinVerificationConfig:
-    """Get configuration for larger model (if memory allows)"""
-    config = TwinVerificationConfig()
-    
-    # Larger model settings
-    config.D_MODEL = 1024
-    config.NUM_HEADS = 16
-    config.D_FF = 4096
-    config.FEATURE_DIM = 1024 * 2
-    
-    # Reduce batch size due to memory constraints
-    config.BATCH_SIZE_PER_GPU = 4
-    config.TOTAL_BATCH_SIZE = 8
-    config.EFFECTIVE_BATCH_SIZE = 32
-    config.GRADIENT_ACCUMULATION = 4
-    
-    return config
-
-
-def get_kaggle_minimal_config() -> TwinVerificationConfig:
-    """Ultra-minimal configuration for Kaggle T4 - absolute minimum memory usage"""
-    config = TwinVerificationConfig()
-    
-    # Kaggle single GPU setup
-    config.WORLD_SIZE = 1  
-    config.GPUS = ["cuda:0"]  
-    
-    # Absolute minimal batch size
-    config.BATCH_SIZE_PER_GPU = 1  # Absolute minimum for DCAL
-    config.TOTAL_BATCH_SIZE = 1    
-    config.GRADIENT_ACCUMULATION = 60  # Very high accumulation to maintain effective batch size
-    config.EFFECTIVE_BATCH_SIZE = 60   # 1 * 60 accumulation steps
-    
-    # Reduce input size to save memory (224x224 instead of 448x448)
-    config.INPUT_SIZE = 224
-    config.NUM_PATCHES = 196  # (224/16)^2 = 14^2 = 196
-    config.SEQUENCE_LENGTH = 197  # 196 patches + 1 CLS token
-    
-    # Reduce model dimensions for memory efficiency
-    config.D_MODEL = 512      # Reduced from 768
-    config.NUM_HEADS = 8      # Reduced from 12
-    config.D_FF = 2048        # Reduced from 3072
-    config.FEATURE_DIM = 512 * 2  # Adjusted for smaller D_MODEL
-    
-    # Reduce DCAL blocks for memory
-    config.SA_BLOCKS = 8      # Reduced from 12
-    config.PWCA_BLOCKS = 8    # Reduced from 12 
-    config.GLCA_BLOCKS = 1    # Keep same
-    
-    # Maximum memory optimization
-    config.NUM_WORKERS = 0    # No multiprocessing workers (use main thread)
-    config.PIN_MEMORY = False 
-    config.PERSISTENT_WORKERS = False
-    config.PREFETCH_FACTOR = 1
-    
-    # Disable memory-intensive features
-    config.COMPILE_MODEL = False
-    config.MIXED_PRECISION = True  # Keep this for memory savings
-    config.LOG_ATTENTION_MAPS = False  # Disable attention visualization
-    
-    # WandB tracking for Kaggle (API key should be in Kaggle secrets as WANDB_API_KEY)
-    config.TRACKING_MODE = "wandb"
-    config.WANDB_PROJECT = "dcal-twin-verification"
-    config.WANDB_ENTITY = "hunchoquavodb-hanoi-university-of-science-and-technology"
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "minimal-memory", "224x224"]
-    
-    # Kaggle paths
-    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
-    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
-    config.SAVE_DIR = "/kaggle/working/checkpoints"
-    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
-    
-    # Training schedule
-    config.EPOCHS = 100
-    config.WARMUP_EPOCHS = 10
-    
-    # Reduce logging frequency to save memory
-    config.LOG_FREQ = 200
-    config.VIS_FREQ = 1000
-    config.SAVE_FREQ = 20
     
     return config
 
@@ -644,34 +465,86 @@ def get_kaggle_lite_config() -> TwinVerificationConfig:
     return config
 
 
+def get_no_tracking_config() -> TwinVerificationConfig:
+    """Configuration with no external tracking"""
+    config = TwinVerificationConfig()
+    
+    # Disable all tracking
+    config.TRACKING_MODE = "none"
+    config.MLFLOW_EXPERIMENT_NAME = None
+    config.WANDB_PROJECT = None
+    
+    return config
+
+
+def get_large_model_config() -> TwinVerificationConfig:
+    """Get configuration for larger model (if memory allows)"""
+    config = TwinVerificationConfig()
+    
+    # Larger model settings
+    config.D_MODEL = 1024
+    config.NUM_HEADS = 16
+    config.D_FF = 4096
+    config.FEATURE_DIM = 1024 * 2
+    
+    # Reduce batch size due to memory constraints
+    config.BATCH_SIZE_PER_GPU = 4
+    config.TOTAL_BATCH_SIZE = 8
+    config.EFFECTIVE_BATCH_SIZE = 32
+    config.GRADIENT_ACCUMULATION = 4
+    
+    return config
+
+
 def get_kaggle_p100_config() -> TwinVerificationConfig:
-    """Configuration optimized for Kaggle P100 GPU (16GB memory)"""
+    """Optimized P100 configuration - balanced performance (8-10GB memory usage)"""
     config = TwinVerificationConfig()
     
     # Kaggle single GPU setup
     config.WORLD_SIZE = 1
     config.GPUS = ["cuda:0"]
     
-    # P100 optimized batch size (16GB allows much larger batches than T4)
-    config.BATCH_SIZE_PER_GPU = 8  # 2.7x larger than T4 config
+    # Optimized for 448x448 input with controlled PWCA blocks
+    config.INPUT_SIZE = 448  # Keep high resolution for face details
+    config.NUM_PATCHES = 784  # (448/16)^2 = 28^2 = 784
+    config.SEQUENCE_LENGTH = 785  # 784 patches + 1 CLS token
+    
+    # Scaled batch size for better memory utilization
+    config.BATCH_SIZE_PER_GPU = 8  # 4x larger than working configs
     config.TOTAL_BATCH_SIZE = 8
-    config.GRADIENT_ACCUMULATION = 8  # Lower accumulation for faster updates
-    config.EFFECTIVE_BATCH_SIZE = 64  # 8 * 8 accumulation steps
+    config.GRADIENT_ACCUMULATION = 8  # Maintain reasonable effective batch size
+    config.EFFECTIVE_BATCH_SIZE = 64  # 8 * 8
     
-    # P100 optimized settings
-    config.NUM_WORKERS = 4  # P100 can handle more workers
-    config.PIN_MEMORY = True  # Enable for better throughput
-    config.PERSISTENT_WORKERS = True  # Keep workers alive
-    config.PREFETCH_FACTOR = 4  # Higher prefetch for better pipeline
+    # Model architecture - key insight: limit PWCA blocks
+    config.D_MODEL = 768  # Standard ViT-Base dimensions
+    config.NUM_HEADS = 12
+    config.D_FF = 3072
+    config.SA_BLOCKS = 8  # Reasonable number of SA blocks
+    config.GLCA_BLOCKS = 1  # Keep GLCA for core contribution
+    config.PWCA_BLOCKS = 2  # KEY: Limit to 2 blocks like working configs
     
-    # Disable model compilation for P100 (CUDA capability 6.0 < 7.0 required by Triton)
+    # Optimized data loading
+    config.NUM_WORKERS = 4
+    config.PIN_MEMORY = True
+    config.PERSISTENT_WORKERS = True
+    config.PREFETCH_FACTOR = 2
+    
+    # Disable model compilation for P100 compatibility
     config.COMPILE_MODEL = False
+    config.MIXED_PRECISION = True
     
-    # WandB tracking for Kaggle
+    # Training settings
+    config.EPOCHS = 100
+    config.WARMUP_EPOCHS = 10
+    config.LR = 2e-4
+    config.OPTIMIZER = "AdamW"
+    config.SCHEDULER = "cosine_warmup"
+    
+    # WandB tracking
     config.TRACKING_MODE = "wandb"
-    config.WANDB_PROJECT = "dcal-twin-verification-p100"
+    config.WANDB_PROJECT = "dcal-twin-verification"
     config.WANDB_ENTITY = "hunchoquavodb-hanoi-university-of-science-and-technology"
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-optimized"]
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-optimized", "448x448"]
     
     # Kaggle paths
     config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
@@ -679,118 +552,102 @@ def get_kaggle_p100_config() -> TwinVerificationConfig:
     config.SAVE_DIR = "/kaggle/working/checkpoints"
     config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
     
-    # Reduce epochs for Kaggle time limits but make each epoch more effective
-    config.EPOCHS = 100
-    config.WARMUP_EPOCHS = 5  # Shorter warmup with larger batches
-    
     return config
 
 
 def get_kaggle_p100_fast_config() -> TwinVerificationConfig:
-    """Ultra-fast configuration for P100 with reduced model complexity"""
+    """Fast P100 configuration - maximum memory utilization (12-14GB memory usage)"""
     config = get_kaggle_p100_config()
     
-    # Reduce DCAL complexity for speed
-    config.SA_BLOCKS = 6  # Half the SA blocks
-    config.GLCA_BLOCKS = 1  # Keep GLCA
-    config.PWCA_BLOCKS = 6  # Half the PWCA blocks
-    
-    # Larger batch size with reduced model
-    config.BATCH_SIZE_PER_GPU = 12  # Even larger batch
+    # Larger batch size for maximum memory utilization
+    config.BATCH_SIZE_PER_GPU = 12  # 3x larger than base config
     config.TOTAL_BATCH_SIZE = 12
-    config.GRADIENT_ACCUMULATION = 6  # Lower accumulation
+    config.GRADIENT_ACCUMULATION = 6  # Lower accumulation for faster updates
     config.EFFECTIVE_BATCH_SIZE = 72  # 12 * 6
     
-    # Faster data loading
+    # Enhanced model while keeping PWCA blocks minimal
+    config.SA_BLOCKS = 12  # More SA blocks (less memory intensive)
+    config.GLCA_BLOCKS = 1  # Keep GLCA
+    config.PWCA_BLOCKS = 2  # KEY: Keep only 2 PWCA blocks
+    
+    # Optimized data loading for speed
     config.NUM_WORKERS = 6
-    config.PREFETCH_FACTOR = 6
+    config.PREFETCH_FACTOR = 4
     
-    # Reduce some precision for speed
-    config.LOCAL_QUERY_RATIO = 0.10  # Less local attention computation
+    # Adjusted learning rate for larger effective batch size
+    config.LR = 3.37e-4  # Scaled for batch size 72
     
-    # Update learning rate for larger effective batch
-    config.EFFECTIVE_BATCH_SIZE = 72
-    
-    # Aggressive logging reduction
-    config.LOG_FREQ = 50  # More frequent logging to see progress
-    config.VIS_FREQ = 1000  # Less frequent visualization
-    
-    # Tags for tracking
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-fast", "reduced-complexity"]
+    # Updated tags
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-fast", "448x448", "memory-optimized"]
     
     return config
 
 
 def get_kaggle_p100_minimal_config() -> TwinVerificationConfig:
-    """Minimal complexity configuration for maximum speed"""
+    """Minimal P100 configuration - conservative memory usage (4-6GB memory usage)"""
     config = get_kaggle_p100_config()
     
-    # Minimal DCAL complexity
-    config.SA_BLOCKS = 4  # Much fewer SA blocks
-    config.GLCA_BLOCKS = 1  # Keep GLCA for the paper's core contribution
-    config.PWCA_BLOCKS = 4  # Much fewer PWCA blocks
+    # Conservative batch size
+    config.BATCH_SIZE_PER_GPU = 4  # Same as ultra-conservative but 448x448
+    config.TOTAL_BATCH_SIZE = 4
+    config.GRADIENT_ACCUMULATION = 15  # Higher accumulation
+    config.EFFECTIVE_BATCH_SIZE = 60  # 4 * 15
     
-    # Maximum batch size for minimal model
+    # Reduced model complexity
+    config.D_MODEL = 512  # Smaller dimensions
+    config.NUM_HEADS = 8
+    config.D_FF = 2048
+    config.SA_BLOCKS = 6  # Fewer SA blocks
+    config.GLCA_BLOCKS = 1  # Keep GLCA
+    config.PWCA_BLOCKS = 2  # KEY: Keep only 2 PWCA blocks
+    
+    # Conservative data loading
+    config.NUM_WORKERS = 2
+    config.PREFETCH_FACTOR = 1
+    
+    # Adjusted learning rate
+    config.LR = 1.5e-4
+    
+    # Updated tags
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-minimal", "448x448", "conservative"]
+    
+    return config
+
+
+def get_kaggle_p100_max_config() -> TwinVerificationConfig:
+    """Maximum P100 configuration - push memory limits (14-15GB memory usage)"""
+    config = get_kaggle_p100_config()
+    
+    # Maximum batch size
     config.BATCH_SIZE_PER_GPU = 16  # Very large batch
     config.TOTAL_BATCH_SIZE = 16
     config.GRADIENT_ACCUMULATION = 4  # Minimal accumulation
     config.EFFECTIVE_BATCH_SIZE = 64  # 16 * 4
     
-    # Simplified loss (remove some expensive losses)
-    config.LOSS_WEIGHTS = {
-        "triplet": 0.0,  # Remove triplet loss (expensive)
-        "bce": 0.7,      # Focus on main verification loss
-        "focal": 0.3,    # Keep focal for hard examples
-        "sa_weight": 1.0,
-        "glca_weight": 1.0,
-        "pwca_weight": 0.1  # Minimal PWCA weight
-    }
+    # Large model with controlled PWCA
+    config.D_MODEL = 1024  # Larger dimensions
+    config.NUM_HEADS = 16
+    config.D_FF = 4096
+    config.SA_BLOCKS = 16  # Many SA blocks
+    config.GLCA_BLOCKS = 1  # Keep GLCA
+    config.PWCA_BLOCKS = 3  # KEY: Only 3 PWCA blocks (still conservative)
     
-    # Faster optimization
-    config.OPTIMIZER = "AdamW"
-    config.SCHEDULER = "cosine_warmup"
-    config.WARMUP_EPOCHS = 3
+    # Maximum data loading
+    config.NUM_WORKERS = 8
+    config.PREFETCH_FACTOR = 6
     
-    # Reduce some computational overhead
-    config.STOCHASTIC_DEPTH = 0.05  # Less stochastic depth
-    config.CLIP_GRAD_NORM = 0.5  # Less aggressive clipping
+    # Adjusted learning rate
+    config.LR = 2.5e-4
     
-    # Tags for tracking
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-minimal", "ultra-fast"]
+    # Updated tags
+    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-max", "448x448", "large-model"]
     
     return config
 
 
-def get_kaggle_p100_data_optimized_config() -> TwinVerificationConfig:
-    """P100 config with optimized data loading and caching"""
-    config = get_kaggle_p100_config()
-    
-    # Optimized data loading
-    config.NUM_WORKERS = 8  # More workers for data loading
-    config.PREFETCH_FACTOR = 8  # High prefetch
-    config.PERSISTENT_WORKERS = True  # Keep workers alive
-    config.PIN_MEMORY = True  # Faster GPU transfer
-    
-    # Batch size optimized for data throughput
-    config.BATCH_SIZE_PER_GPU = 10
-    config.TOTAL_BATCH_SIZE = 10
-    config.GRADIENT_ACCUMULATION = 6
-    config.EFFECTIVE_BATCH_SIZE = 60
-    
-    # Disable some expensive augmentations
-    config.MIXUP_PROB = 0.0  # Disable mixup for speed
-    config.ROTATION_DEGREES = 0  # Disable rotation
-    config.COLOR_JITTER_BRIGHTNESS = 0.0  # Disable color jitter
-    config.COLOR_JITTER_CONTRAST = 0.0
-    
-    # Reduce validation frequency
-    config.SAVE_FREQ = 20  # Less frequent saving
-    config.LOG_FREQ = 25  # More frequent progress logging
-    
-    # Tags for tracking
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-data-optimized"]
-    
-    return config
+# Remove non-working configs - keep only the optimized ones that work
+# get_kaggle_p100_data_optimized_config - REMOVED (didn't work)
+# get_kaggle_p100_ultra_conservative_config - REMOVED (replaced by p100_minimal)
 
 
 def get_local_2080ti_fast_config() -> TwinVerificationConfig:
@@ -874,83 +731,3 @@ def load_config(load_path: str) -> TwinVerificationConfig:
         config_dict = json.load(f)
     
     return TwinVerificationConfig.from_dict(config_dict) 
-
-
-def get_kaggle_p100_ultra_conservative_config() -> TwinVerificationConfig:
-    """Ultra-conservative P100 configuration - guaranteed to fit in memory"""
-    config = TwinVerificationConfig()
-    
-    # Kaggle single GPU setup
-    config.WORLD_SIZE = 1
-    config.GPUS = ["cuda:0"]
-    
-    # Ultra-conservative batch size
-    config.BATCH_SIZE_PER_GPU = 4  # Very small batch
-    config.TOTAL_BATCH_SIZE = 4
-    config.GRADIENT_ACCUMULATION = 15  # High accumulation to maintain effective batch
-    config.EFFECTIVE_BATCH_SIZE = 60  # 4 * 15
-    
-    # Smallest viable input size
-    config.INPUT_SIZE = 224
-    config.NUM_PATCHES = 196  # (224/16)^2 = 14^2 = 196
-    config.SEQUENCE_LENGTH = 197  # 196 patches + 1 CLS token
-    
-    # Minimal model dimensions
-    config.D_MODEL = 384      # Even smaller
-    config.NUM_HEADS = 6      # Fewer heads
-    config.D_FF = 1536        # Smaller FFN
-    config.FEATURE_DIM = 384 * 2  # Adjusted for smaller D_MODEL
-    
-    # Absolute minimal DCAL blocks
-    config.SA_BLOCKS = 3      # Minimum for SA
-    config.GLCA_BLOCKS = 1    # Keep GLCA (core contribution)
-    config.PWCA_BLOCKS = 2    # Minimum PWCA blocks
-    
-    # Ultra-conservative data loading
-    config.NUM_WORKERS = 2
-    config.PIN_MEMORY = False
-    config.PERSISTENT_WORKERS = False
-    config.PREFETCH_FACTOR = 1
-    
-    # Disable everything possible
-    config.COMPILE_MODEL = False
-    config.MIXED_PRECISION = True  # Keep for memory savings
-    config.LOG_ATTENTION_MAPS = False
-    config.STOCHASTIC_DEPTH = 0.0  # Disable
-    config.DROPOUT = 0.0  # Disable
-    
-    # Simplified loss function
-    config.LOSS_WEIGHTS = {
-        "triplet": 0.0,  # Remove triplet loss (expensive)
-        "bce": 1.0,      # Only use BCE
-        "focal": 0.0,    # Remove focal loss
-        "sa_weight": 1.0,
-        "glca_weight": 1.0,
-        "pwca_weight": 0.1  # Minimal PWCA weight
-    }
-    
-    # Faster training
-    config.EPOCHS = 50  # Fewer epochs
-    config.WARMUP_EPOCHS = 2
-    config.LR = 1e-4
-    config.OPTIMIZER = "AdamW"
-    config.SCHEDULER = "cosine_warmup"
-    
-    # Minimal logging
-    config.LOG_FREQ = 100
-    config.VIS_FREQ = 2000
-    config.SAVE_FREQ = 10
-    
-    # WandB tracking
-    config.TRACKING_MODE = "wandb"
-    config.WANDB_PROJECT = "dcal-twin-verification"
-    config.WANDB_ENTITY = "hunchoquavodb-hanoi-university-of-science-and-technology"
-    config.WANDB_TAGS = ["dcal", "kaggle", "twins", "face-verification", "p100-ultra-conservative", "224x224"]
-    
-    # Kaggle paths
-    config.DATASET_INFO = "/kaggle/input/twin-dataset/dataset_infor.json"
-    config.TWIN_PAIRS_INFO = "/kaggle/input/twin-dataset/twin_pairs_infor.json"
-    config.SAVE_DIR = "/kaggle/working/checkpoints"
-    config.TENSORBOARD_LOG_DIR = "/kaggle/working/logs/tensorboard"
-    
-    return config 
