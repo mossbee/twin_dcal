@@ -32,8 +32,8 @@ python scripts/train_twin_verification.py --config kaggle_p100_minimal
 ```bash
 # Pre-optimize data loading first
 python scripts/optimize_data_loading.py \
-    --dataset_info /kaggle/input/twin-dataset/dataset_infor.json \
-    --twin_pairs /kaggle/input/twin-dataset/twin_pairs_infor.json \
+    --dataset_info /kaggle/input/twin-dataset/train_dataset_infor.json \
+    --twin_pairs /kaggle/input/twin-dataset/train_twin_pairs.json \
     --output_dir /kaggle/working/optimized_data
 
 # Then train with optimized data
@@ -92,8 +92,8 @@ python scripts/train_twin_verification.py --config kaggle_p100_minimal
 # Option 3: Data-optimized training (best results)
 # First optimize data:
 python scripts/optimize_data_loading.py \
-    --dataset_info /kaggle/input/twin-dataset/dataset_infor.json \
-    --twin_pairs /kaggle/input/twin-dataset/twin_pairs_infor.json \
+    --dataset_info /kaggle/input/twin-dataset/train_dataset_infor.json \
+    --twin_pairs /kaggle/input/twin-dataset/train_twin_pairs.json \
     --output_dir /kaggle/working/optimized_data \
     --config kaggle_p100_fast
 
@@ -135,8 +135,8 @@ python scripts/train_twin_verification.py --config local_2080ti_fast
 ```bash
 # Pre-compute all pairs and cache tensors
 python scripts/optimize_data_loading.py \
-    --dataset_info /path/to/dataset_infor.json \
-    --twin_pairs /path/to/twin_pairs_infor.json \
+    --dataset_info /path/to/train_dataset_infor.json \
+    --twin_pairs /path/to/train_twin_pairs.json \
     --output_dir optimized_data \
     --num_workers 8 \
     --batch_size 16

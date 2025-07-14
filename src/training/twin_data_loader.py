@@ -369,9 +369,9 @@ def create_data_loaders(config,
     """
     # Use config paths if not provided
     if dataset_info_path is None:
-        dataset_info_path = config.DATASET_INFO
+        dataset_info_path = config.TRAIN_DATASET_INFOR
     if twin_pairs_path is None:
-        twin_pairs_path = config.TWIN_PAIRS_INFO
+        twin_pairs_path = config.TRAIN_TWIN_PAIRS
     
     # Create transforms
     train_transform = create_train_transforms(config)
@@ -399,14 +399,14 @@ def create_data_loaders(config,
     )
     
     # Create test dataset - use external if configured, otherwise use split from main dataset
-    if config.USE_EXTERNAL_TEST and config.EXTERNAL_TEST_DATASET is not None:
-        print(f"Using external test dataset: {config.EXTERNAL_TEST_DATASET}")
+    if config.USE_TEST_SET and config.TEST_DATASET_INFOR is not None:
+        print(f"Using external test dataset: {config.TEST_DATASET_INFOR}")
         # Validate external test dataset exists
-        if not os.path.exists(config.EXTERNAL_TEST_DATASET):
-            raise FileNotFoundError(f"External test dataset not found: {config.EXTERNAL_TEST_DATASET}")
+        if not os.path.exists(config.TEST_DATASET_INFOR):
+            raise FileNotFoundError(f"External test dataset not found: {config.TEST_DATASET_INFOR}")
         
         # Use external test pairs if provided, otherwise use main twin pairs
-        external_twin_pairs = config.EXTERNAL_TEST_PAIRS if config.EXTERNAL_TEST_PAIRS else twin_pairs_path
+        external_twin_pairs = config.TEST_TWIN_PAIRS if config.TEST_TWIN_PAIRS else twin_pairs_path
         
         # Validate external twin pairs exist
         if external_twin_pairs and not os.path.exists(external_twin_pairs):
@@ -416,7 +416,7 @@ def create_data_loaders(config,
         
         # Create external test dataset
         test_dataset = TwinVerificationDataset(
-            dataset_info_path=config.EXTERNAL_TEST_DATASET,
+            dataset_info_path=config.TEST_DATASET_INFOR,
             twin_pairs_path=external_twin_pairs,
             split='test',  # Use all data from external dataset as test
             train_ratio=0.0,  # All external data is test data

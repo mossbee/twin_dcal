@@ -38,13 +38,6 @@ from configs.twin_verification_config import (
     TwinVerificationConfig, 
     get_debug_config, 
     get_single_gpu_config,
-    get_kaggle_lite_config,
-    get_kaggle_p100_config,
-    get_kaggle_p100_fast_config,
-    get_kaggle_p100_minimal_config,
-    get_kaggle_p100_max_config,
-    get_local_2080ti_fast_config,
-    get_kaggle_distributed_config,
     get_no_tracking_config,
     print_config_summary,
     save_config,
@@ -63,23 +56,29 @@ def parse_arguments():
         type=str, 
         default='default',
         choices=[
-            'default', 'debug', 'single_gpu', 'kaggle_lite', 'kaggle_p100', 'kaggle_p100_fast',
-            'kaggle_p100_minimal', 'kaggle_p100_max', 'local_2080ti_fast', 'kaggle_distributed', 'no_tracking'
+            'default', 'debug', 'single_gpu', 'no_tracking', 'search_best'
         ],
-        help='Configuration preset to use'
+        help='Configuration preset to use (search_best loads best config from automated search)'
+    )
+    
+    parser.add_argument(
+        '--config_file',
+        type=str,
+        default=None,
+        help='Path to custom configuration file (JSON format)'
     )
     
     parser.add_argument(
         '--dataset_info',
         type=str,
-        default='data/dataset_infor.json',
+        default='data/train_dataset_infor.json',
         help='Path to dataset information JSON'
     )
     
     parser.add_argument(
         '--twin_pairs',
         type=str, 
-        default='data/twin_pairs_infor.json',
+        default='data/train_twin_pairs.json',
         help='Path to twin pairs information JSON'
     )
     
@@ -178,22 +177,16 @@ def get_config(config_name: str) -> TwinVerificationConfig:
         return get_single_gpu_config()
     elif config_name == 'default':
         return TwinVerificationConfig()
-    elif config_name == 'kaggle_lite':
-        return get_kaggle_lite_config()
-    elif config_name == 'kaggle_p100':
-        return get_kaggle_p100_config()
-    elif config_name == 'kaggle_p100_fast':
-        return get_kaggle_p100_fast_config()
-    elif config_name == 'kaggle_p100_minimal':
-        return get_kaggle_p100_minimal_config()
-    elif config_name == 'kaggle_p100_max':
-        return get_kaggle_p100_max_config()
-    elif config_name == 'local_2080ti_fast':
-        return get_local_2080ti_fast_config()
-    elif config_name == 'kaggle_distributed':
-        return get_kaggle_distributed_config()
     elif config_name == 'no_tracking':
         return get_no_tracking_config()
+    elif config_name == 'search_best':
+        # Load best config from automated search
+        try:
+            return load_config("configs/search_results/best_config.json")
+        except FileNotFoundError:
+            print("❌ Best config not found. Run automated search first:")
+            print("   python scripts/automated_config_search.py --gpu_type p100")
+            raise
     else:
         raise ValueError(f"Unknown config: {config_name}")
 
@@ -212,10 +205,10 @@ def setup_environment(args, config):
     
     # Override paths if provided
     if args.dataset_info:
-        config.DATASET_INFO = args.dataset_info
+        config.TRAIN_DATASET_INFOR = args.dataset_info
     
     if args.twin_pairs:
-        config.TWIN_PAIRS_INFO = args.twin_pairs
+        config.TRAIN_TWIN_PAIRS = args.twin_pairs
     
     # Set output directory
     if args.output_dir:
@@ -261,14 +254,14 @@ def print_dataset_info(config):
     
     try:
         # Calculate dataset statistics
-        stats = calculate_dataset_stats(config.DATASET_INFO)
+        stats = calculate_dataset_stats(config.TRAIN_DATASET_INFOR)
         print(f"Total identities: {stats['total_identities']}")
         print(f"Total images: {stats['total_images']}")
         print(f"Images per person: {stats['min_images_per_person']}-{stats['max_images_per_person']} "
               f"(avg: {stats['avg_images_per_person']:.1f})")
         
         # Estimate pair counts
-        pair_counts = estimate_pair_counts(config.DATASET_INFO, config.TWIN_PAIRS_INFO)
+        pair_counts = estimate_pair_counts(config.TRAIN_DATASET_INFOR, config.TRAIN_TWIN_PAIRS)
         print(f"Positive pairs: {pair_counts['positive_pairs']:,}")
         print(f"Twin negative pairs: {pair_counts['twin_negative_pairs']:,}")
         print(f"Regular negative pairs: {pair_counts['regular_negative_pairs']:,}")
@@ -282,7 +275,11 @@ def print_dataset_info(config):
 def single_gpu_main(rank, args):
     """Main function for single GPU training"""
     # Get configuration
-    config = get_config(args.config)
+    if args.config_file:
+        config = load_config(args.config_file)
+    else:
+        config = get_config(args.config)
+    
     config = setup_environment(args, config)
     
     # Print information
@@ -318,13 +315,17 @@ def single_gpu_main(rank, args):
 
 def distributed_main(rank, world_size, args):
     """Main function for distributed training"""
+    # Get configuration
+    if args.config_file:
+        config = load_config(args.config_file)
+    else:
+        config = get_config(args.config)
+    
     # Setup distributed training
-    distributed_trainer = DistributedTrainer(get_config(args.config))
+    distributed_trainer = DistributedTrainer(config)
     distributed_trainer.setup(rank, world_size)
     
     try:
-        # Get configuration
-        config = get_config(args.config)
         config = setup_environment(args, config)
         
         # Print information (only on main process)
@@ -398,8 +399,14 @@ def main():
     if not check_requirements():
         print("Continuing despite warnings...")
     
-    # Get configuration first to check intended WORLD_SIZE
-    config = get_config(args.config)
+    # Get configuration
+    if args.config_file:
+        # Load custom config from file
+        config = load_config(args.config_file)
+        print(f"Loaded custom configuration from: {args.config_file}")
+    else:
+        # Use predefined config
+        config = get_config(args.config)
     
     # Determine world size based on configuration and command line args
     if args.local_rank != -1:

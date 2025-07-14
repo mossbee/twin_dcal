@@ -129,7 +129,7 @@ python scripts/train_twin_verification.py --config no_tracking
 # Evaluate trained model
 python scripts/evaluate_verification.py \
     --model checkpoints/best_model.pth \
-    --test_data data/test_pairs.json \
+    --test_data data/test_twin_pairs.json \
     --visualize
 
 # With threshold optimization
@@ -193,7 +193,7 @@ data/
 
 ### Twin Pairs Information
 
-Create `twin_pairs_infor.json`:
+Create `train_twin_pairs.json`:
 
 ```json
 [

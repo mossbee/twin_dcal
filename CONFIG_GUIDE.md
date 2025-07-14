@@ -187,7 +187,7 @@ python scripts/train_twin_verification.py \
     --mlflow_uri "http://server:port" \
     --wandb_project "project-name" \
     --wandb_entity "username" \
-    --dataset_info "path/to/dataset_infor.json" \
-    --twin_pairs "path/to/twin_pairs_infor.json" \
+    --dataset_info "path/to/train_dataset_infor.json" \
+    --twin_pairs "path/to/train_twin_pairs.json" \
     --output_dir "custom/output/path"
 ``` 

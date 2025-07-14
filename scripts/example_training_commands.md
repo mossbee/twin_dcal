@@ -40,8 +40,8 @@ python scripts/train_twin_verification.py --config kaggle
 ```bash
 python scripts/train_twin_verification.py \
     --config kaggle \
-    --dataset_info "/kaggle/input/twin-dataset/dataset_infor.json" \
-    --twin_pairs "/kaggle/input/twin-dataset/twin_pairs_infor.json"
+    --dataset_info "/kaggle/input/twin-dataset/train_dataset_infor.json" \
+    --twin_pairs "/kaggle/input/twin-dataset/train_twin_pairs.json"
 ```
 
 ## Mixed Environment Training

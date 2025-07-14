@@ -11,7 +11,7 @@ This script handles:
 
 Usage:
     # Basic evaluation
-    python evaluate_verification.py --model checkpoints/best_model.pth --test_data data/test_pairs.json
+    python evaluate_verification.py --model checkpoints/best_model.pth --test_data data/test_twin_pairs.json
 
     # With threshold optimization
     python evaluate_verification.py --model best_model.pth --optimize_threshold --val_data data/val_pairs.json
@@ -68,7 +68,7 @@ def parse_arguments():
     parser.add_argument(
         '--test_data',
         type=str,
-        default='data/test_pairs.json',
+        default='data/test_twin_pairs.json',
         help='Path to test data pairs'
     )
     
@@ -82,7 +82,7 @@ def parse_arguments():
     parser.add_argument(
         '--twin_pairs',
         type=str,
-        default='data/twin_pairs_infor.json',
+        default='data/train_twin_pairs.json',
         help='Path to twin pairs information'
     )
     
